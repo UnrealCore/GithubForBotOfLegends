@@ -3,10 +3,10 @@ if myHero.charName ~= "Urgot" then return end
 require 'SourceLibk'
 
 local autoUpdate = true
-local Version = 1.00
+local Version = 1.0
 
 if autoUpdate then
-	SimpleUpdater("UrgotCore", Version, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/UrgotCore/UrgotCore.lua" , SCRIPT_PATH .. "UrgotCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/UrgotCore/UrgotCore.version" ):CheckUpdate()
+	SimpleUpdater("UrgotCore", Version, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/UrgotCore/UrgotCore.lua" , SCRIPT_PATH .. "UrgotCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/UrgotCore/UrgotCore.version" ):CheckUpdate()
 end
 --[[
 	Major module
