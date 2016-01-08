@@ -30,7 +30,7 @@ else
 end
 
 
-local ScriptVersion = 1.2
+local ScriptVersion = 1.3
 
 SimpleUpdater("[ThreshCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ThreshCore/ThreshCore.lua" , SCRIPT_PATH .. "ThreshCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ThreshCore/ThreshCore.version" ):CheckUpdate()
 
@@ -240,14 +240,14 @@ function Harass()
 	
 	if(target ~= nil)then
 		if(Q:IsReady() and Config.Harass.UseQ < 3 and GetDistance(target) < Q.range ) then
-			if Q:GetName():find("one") then
+			if Q:GetName() == "ThreshQ" then
 				Q:Cast(target)
-			elseif Q:GetName():find("two") and Config.Harass.UseQ == 1 then
+			elseif Q:GetName():find("leep") and Config.Harass.UseQ == 1 then
 				Q:Cast()
 			end
 		end
 		if(E:IsReady() and Config.Harass.UseW and GetDistance(target) < E.range ) then
-			E:Cast(target)
+			Push(target)
 		end
 	end
 end
