@@ -30,7 +30,7 @@ else
 end
 
 
-local ScriptVersion = 1.1
+local ScriptVersion = 1.2
 
 SimpleUpdater("[ThreshCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ThreshCore/ThreshCore.lua" , SCRIPT_PATH .. "ThreshCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ThreshCore/ThreshCore.version" ):CheckUpdate()
 
@@ -229,7 +229,7 @@ function Combo()
 		if(Q:IsReady() and Config.Combo.UseQ and GetDistance(target) < Q.range ) then
 			Q:Cast(target)
 		end
-		if(R:IsReady() and Config.Combo.UseR and GetDistance(target) < R.range and GetNearObject(myHero, 400, GetEnemyHeores()) < Config.Combo.UseRPercent) then
+		if(R:IsReady() and Config.Combo.UseR and GetDistance(target) < R.range and GetNearObject(myHero, 400, GetEnemyHeroes()) < Config.Combo.UseRPercent) then
 			R:Cast()
 		end
 	end
