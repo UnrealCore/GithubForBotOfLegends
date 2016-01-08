@@ -1,6 +1,33 @@
 if myHero.charName ~= "Urgot" then return end
 
-require 'SourceLibk'
+--[[
+
+	just check for sourcelibk renamed to sourcelib_fix
+	
+	navermind
+
+]]
+
+function file_check(file_name)
+  local file_found=io.open(file_name, "r")      
+
+  if file_found==nil then
+    return false
+  else
+    return true
+  end
+  return file_found
+end
+
+if(file_check(LIB_PATH.."SourceLibk.lua")) then
+	require 'SourceLibk';
+elseif(file_check(LIB_PATH.."SourceLib_Fix.lua")) then
+	require 'SourceLib_Fix';
+else
+	print("THreshCore: Download Sourcelibk")
+	return;
+end
+
 
 local autoUpdate = true
 local Version = 1.1

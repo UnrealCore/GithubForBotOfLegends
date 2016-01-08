@@ -1,10 +1,36 @@
 
 if myHero.charName ~= "Thresh" then return end
 
-require 'SourceLibk'
+--[[
+
+	just check for sourcelibk renamed to sourcelib_fix
+	
+	navermind
+
+]]
+
+function file_check(file_name)
+  local file_found=io.open(file_name, "r")      
+
+  if file_found==nil then
+    return false
+  else
+    return true
+  end
+  return file_found
+end
+
+if(file_check(LIB_PATH.."SourceLibk.lua")) then
+	require 'SourceLibk';
+elseif(file_check(LIB_PATH.."SourceLib_Fix.lua")) then
+	require 'SourceLib_Fix';
+else
+	print("THreshCore: Download Sourcelibk")
+	return;
+end
 
 
-local ScriptVersion = 1.00
+local ScriptVersion = 1.1
 
 SimpleUpdater("[ThreshCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ThreshCore/ThreshCore.lua" , SCRIPT_PATH .. "ThreshCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ThreshCore/ThreshCore.version" ):CheckUpdate()
 
@@ -69,10 +95,11 @@ function OnLoad()
 		Config.Combo:addParam("UseW", "Use W", SCRIPT_PARAM_ONOFF, true)
 		Config.Combo:addParam("UseE", "Use E", SCRIPT_PARAM_ONOFF, true)
 		Config.Combo:addParam("UseR", "Use R", SCRIPT_PARAM_ONOFF, true)
+		Config.Combo:addParam("UseRPercent", "use r near enemy >=", SCRIPT_PARAM_SLICE, 2, 1, 5)
 		Config.Combo:addParam("EPush", "E Push/Pull(on/off)", SCRIPT_PARAM_ONOFF, true)
 	
 	Config:addSubMenu("Harass", "Harass")
-		Config.Harass:addParam("UseQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
+		Config.Harass:addParam("UseQ", "Use Q", SCRIPT_PARAM_LIST, 2, {"throw and go", "only throw", "off"})
 		Config.Harass:addParam("UseE", "Use E", SCRIPT_PARAM_ONOFF, true)
 	
 	Config:addSubMenu("Flay", "Flay")
@@ -93,7 +120,7 @@ function OnLoad()
 	
 	Config:addSubMenu("Lantern Settings", "LanternSettings")
 		Config.LanternSettings:addParam("ThreshLantern", "Throw Lantern to ally", SCRIPT_PARAM_ONKEYDOWN, false, string.byte('T'))
-		Config.LanternSettings:addParam("Prioritize", "Prioritize", SCRIPT_PARAM_LIST, 3, {"FARTHEST Ally", "NEAREST ALLY", "LOW ALLY"})
+		Config.LanternSettings:addParam("Prioritize", "Prioritize", SCRIPT_PARAM_LIST, 3, {"FARTHEST Ally", "NEAREST ALLY", "LOWEST HEALTH ALLY"})
 	
 	Config:addSubMenu("Drawings", "Drawings")
 		QCircle:AddToMenu(Config.Drawings, "Q circle setting", true, false, true)
@@ -110,10 +137,12 @@ function OnLoad()
 end
 
 function OnTick()
-	if(Config.Flay.Push) then
-		Push()
-	elseif (Config.Flay.Pull) then
-		Pull()
+	if(Config.Flay ~= nil) then
+		if(Config.Flay.Push) then
+			Push()
+		elseif (Config.Flay.Pull) then
+			Pull()
+		end
 	end
 	
 	--if(Config.FHook.FlashQ) then
@@ -200,7 +229,7 @@ function Combo()
 		if(Q:IsReady() and Config.Combo.UseQ and GetDistance(target) < Q.range ) then
 			Q:Cast(target)
 		end
-		if(R:IsReady() and Config.Combo.UseR and GetDistance(target) < R.range) then
+		if(R:IsReady() and Config.Combo.UseR and GetDistance(target) < R.range and GetNearObject(myHero, 400, GetEnemyHeores()) < Config.Combo.UseRPercent) then
 			R:Cast()
 		end
 	end
@@ -210,11 +239,25 @@ function Harass()
 	target = GetTarget() or STS:GetTarget(Q2.range)
 	
 	if(target ~= nil)then
-		if(Q:IsReady() and Config.Harass.UseQ and GetDistance(target) < Q.range ) then
-			Q:Cast(target)
+		if(Q:IsReady() and Config.Harass.UseQ < 3 and GetDistance(target) < Q.range ) then
+			if Q:GetName():find("one") then
+				Q:Cast(target)
+			elseif Q:GetName():find("two") and Config.Harass.UseQ == 1 then
+				Q:Cast()
+			end
 		end
 		if(E:IsReady() and Config.Harass.UseW and GetDistance(target) < E.range ) then
 			E:Cast(target)
 		end
 	end
+end
+
+function GetNearObject(position, distance, objects)
+	local count = 0;
+	for index, object in ipairs(objects) do
+		if(GetDistance(position, object) < distance) then
+			count = count+1
+		end
+	end
+	return count
 end
