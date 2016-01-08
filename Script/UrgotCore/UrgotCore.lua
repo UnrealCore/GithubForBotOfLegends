@@ -3,7 +3,7 @@ if myHero.charName ~= "Urgot" then return end
 require 'SourceLibk'
 
 local autoUpdate = true
-local Version = 1.0
+local Version = 1.1
 
 if autoUpdate then
 	SimpleUpdater("UrgotCore", Version, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/UrgotCore/UrgotCore.lua" , SCRIPT_PATH .. "UrgotCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/UrgotCore/UrgotCore.version" ):CheckUpdate()
@@ -140,9 +140,9 @@ end
 ]]
 function _Initialization_()
 	_Init_Done_ = false
-
-	_Initialization_Menu_()
+	
 	_Initialization_Spell_()
+	_Initialization_Menu_()
 	
 	enemyMinions = minionManager(MINION_ENEMY, Q.Range, myHero, MINION_SORT_MAXHEALTH_DEC)
 	
@@ -153,7 +153,8 @@ function _Initialization_Menu_()
 	Config = scriptConfig("UrgotCore", "UrgotCore")
 	
 	Config:addSubMenu("Orbwalk manager", "ORBWALK")
-		OBM = OrbWalkManager("UrgotCore",Config.ORBWALK)
+		OBM = OrbWalkManager("UrgotCore")
+		OBM:AddToMenu(Config.ORBWALK)
 	
 	Config:addSubMenu("TargetSelector", "TARGETSELECTOR")
 		STS:AddToMenu(Config.TARGETSELECTOR)
@@ -175,8 +176,11 @@ function _Initialization_Menu_()
 	
 	Config:addSubMenu("Skillshot manager", "SKILLSHOT")
 		Config.SKILLSHOT:addSubMenu("Q skillshot", "Q")
+		SpellQ:AddToMenu(Config.SKILLSHOT.Q)
 		Config.SKILLSHOT:addSubMenu("Q2 skillshot", "Q2")
+		SpellQ2:AddToMenu(Config.SKILLSHOT.Q2)
 		Config.SKILLSHOT:addSubMenu("E skillshot", "E")
+		SpellE:AddToMenu(Config.SKILLSHOT.E)
 	
 	Config:addSubMenu("Draw manager", "DRAW")
 		QCircle = _Circle(myHero, Q.Range, 1, {100, 255, 0, 0})
@@ -190,8 +194,11 @@ function _Initialization_Menu_()
 end
 
 function _Initialization_Spell_()
-	SpellQ = Spell(_Q, Config.SKILLSHOT.Q, SKILLSHOT_LINEAR, Q.Range, Q.Width, Q.Delay, Q.Speed, true)
-	SpellQ2 = Spell(_Q, Config.SKILLSHOT.Q2, SKILLSHOT_LINEAR, Q.Range, Q.Width, Q.Delay, Q.Speed)
-	SpellE = Spell(_E, Config.SKILLSHOT.E, SKILLSHOT_CIRCULAR, E.Range, E.Width, E.Delay, E.Speed)
+	SpellQ = Spell(_Q, Q.Range)
+	SpellQ:SetSkillshot(SKILLSHOT_LINEAR, Q.Width, Q.Delay, Q.Speed, true) --Config.SKILLSHOT.Q, 
+	SpellQ2 = Spell(_Q, Q.Range)
+	SpellQ2:SetSkillshot(SKILLSHOT_LINEAR, Q.Width, Q.Delay, Q.Speed) -- Config.SKILLSHOT.Q2, 
+	SpellE = Spell(_E, E.Range)
+	SpellE:SetSkillshot(SKILLSHOT_CIRCULAR, E.Width, E.Delay, E.Speed) --Config.SKILLSHOT.E,
 	SpellW = Spell(_W, 0, SKILLSHOT_OTHER, 0)
 end
