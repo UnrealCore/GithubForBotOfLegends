@@ -29,7 +29,7 @@ else
 end
 
 ---------------------------------------------------------------------
-
+local ScriptVersion = 1.0
 SimpleUpdater("[AhriCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.lua" , SCRIPT_PATH .. "AhriCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.version" ):CheckUpdate()
 
 local Q, W, E, R, Ignite
@@ -118,7 +118,7 @@ function OnLoad()
 		Config.KSMode:addParam("Q", "Killsteal with Q", SCRIPT_PARAM_ONOFF, true)
 		Config.KSMode:addParam("W", "Killsteal with W", SCRIPT_PARAM_ONOFF, true)
 		Config.KSMode:addParam("E", "Killsteal with E", SCRIPT_PARAM_ONOFF, true)
-		Config.KSMode:addParam("Ignite", "Killsteal with Ignite", SCRIPT_PARAM_ONOFF, true)
+		--Config.KSMode:addParam("Ignite", "Killsteal with Ignite", SCRIPT_PARAM_ONOFF, true)
 	
 	Config:addSubMenu("Draw", "Draw")
 		CLib:AddToMenu(Config.Draw)
