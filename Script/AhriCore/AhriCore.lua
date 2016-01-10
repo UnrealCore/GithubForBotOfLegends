@@ -1,3 +1,4 @@
+if myHero.charName ~= "Ahri" then return end
 
 --[[
 
@@ -28,6 +29,8 @@ else
 end
 
 ---------------------------------------------------------------------
+
+SimpleUpdater("[AhriCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.lua" , SCRIPT_PATH .. "AhriCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.version" ):CheckUpdate()
 
 local Q, W, E, R, Ignite
 
