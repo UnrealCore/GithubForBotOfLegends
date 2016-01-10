@@ -1,0 +1,305 @@
+
+--[[
+
+	just check for SourceLibk renamed to SourceLib_Fix
+	
+	navermind
+
+]]
+
+function file_check(file_name)
+	local file_found=io.open(file_name, "r")      
+
+	if file_found==nil then
+		return false
+	else
+		return true
+	end
+	return file_found
+end
+
+if(file_check(LIB_PATH.."SourceLibk.lua")) then
+	require 'SourceLibk';
+elseif(file_check(LIB_PATH.."SourceLib_Fix.lua")) then
+	require 'SourceLib_Fix';
+else
+	print("AhriCore: Download Sourcelibk")
+	return;
+end
+
+---------------------------------------------------------------------
+
+local Q, W, E, R, Ignite
+
+local OLib = OrbWalkManager()
+local STS = SimpleTS()
+local Config = scriptConfig("AhriCore", "AhriCore")
+local DLib = DamageLib()
+local CLib = DrawManager()
+local enemyMinion, enemyJungle
+
+function OnLoad()
+	Q = Spell(_Q, 965)
+	Q:SetSkillshot(SKILLSHOT_LINEAR, 100, 0.2, 1000)
+	W = Spell(_W, 650)
+	E = Spell(_E, 965)
+	E:SetSkillshot(SKILLSHOT_LINEAR, 70, 0.2, 1000, true)
+	R = Spell(_R, 450)
+	_Ignite = GetSummonerSlot("summonerdot", myHero)
+	if(_Ignite ~= nil) then
+		Ignite = Spell(_Ignite, 450)
+	end
+	
+	enemyMinion = minionManager(MINION_ENEMY, Q.range, myHero, MINION_SORT_MAXHEALTH_DEC)
+	enemyJungle = minionManager(MINION_JUNGLE, Q.range, myHero, MINION_SORT_MAXHEALTH_DEC)
+	
+	CLib:CreateCircle(myHero, Q.range, 1, {100, 255, 0, 0}, "Draw Q range")
+	CLib:CreateCircle(myHero, W.range, 1, {100, 255, 0, 0}, "Draw W range")
+	CLib:CreateCircle(myHero, W.range, 1, {100, 255, 0, 0}, "Draw W range")
+	
+	
+	DLib:RegisterDamageSource(_Q, _MAGIC, 40, 15, _MAGIC, _AP, 0.35, function() return (player:CanUseSpell(_Q) == READY) end)
+	DLib:RegisterDamageSource(_W, _MAGIC, 40, 15, _MAGIC, _AP, 0.4, function() return (player:CanUseSpell(_W) == READY) end)
+	DLib:RegisterDamageSource(_E, _MAGIC, 60, 35, _MAGIC, _AP, 0.5, function() return (player:CanUseSpell(_E) == READY) end)
+	DLib:RegisterDamageSource(_R, _MAGIC, 70, 40, _MAGIC, _AP, 0.3, function() return (player:CanUseSpell(_R) == READY) end)
+	
+	Config:addSubMenu("OrbWalkManager", "OLib")
+		OLib:AddToMenu(Config.OLib)
+	
+	Config:addSubMenu("TargetSelector", "TargetSelector")
+		STS:AddToMenu(Config.TargetSelector)
+	
+	Config:addSubMenu("DamageLib", "DamageLib")
+		DLib:AddToMenu(Config.DamageLib, {_Q, _W, _E, _R})
+	
+	Config:addSubMenu("Combo", "Combo")
+		Config.Combo:addParam("Q", "Use Q in combo mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Combo:addParam("W", "Use W in combo mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Combo:addParam("E", "Use E in combo mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Combo:addParam("R", "Use E + R in combo mode", SCRIPT_PARAM_ONOFF, true)
+	
+	Config:addSubMenu("Harass", "Harass")
+		Config.Harass:addParam("Q", "Use Q in harass mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Harass:addParam("W", "Use W in harass mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Harass:addParam("E", "Use E in harass mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Harass:addParam("EHitchance", "Use Hitchance only for harass E", SCRIPT_PARAM_SLICE, 0, 0, 3, 1)
+		Config.Harass:addParam("EHitchanceInfo", "If you want not use upper manu then", SCRIPT_PARAM_INFO, "")
+		Config.Harass:addParam("EHitchanceInfo2", "set value to 0", SCRIPT_PARAM_INFO, "")
+		Config.Harass:addParam("LimitMana", "Use harass if my mana >=", SCRIPT_PARAM_SLICE, 50, 1, 100)
+	
+	Config:addSubMenu("Harass Toggle", "HarassT")
+		Config.HarassT:addParam("Q", "Use Q in harass toggle mode", SCRIPT_PARAM_ONOFF, true)
+		Config.HarassT:addParam("W", "Use W in harass toggle mode", SCRIPT_PARAM_ONOFF, false)
+		Config.HarassT:addParam("E", "Use E in harass toggle mode", SCRIPT_PARAM_ONOFF, false)
+		Config.HarassT:addParam("HotKey", "Use Harass toggle key", SCRIPT_PARAM_ONKEYTOGGLE, false, string.byte('T'))
+	
+	Config:addSubMenu("LastHit", "LastHit")
+		Config.LastHit:addParam("Q", "Use Q in harass toggle mode", SCRIPT_PARAM_ONOFF, true)
+		Config.LastHit:addParam("LimitMana", "Use lasthit if my mana >=", SCRIPT_PARAM_SLICE, 50, 1, 100)
+		Config.LastHit:addParam("SafeMode", "Don't use q when enemy close", SCRIPT_PARAM_ONOFF, true)
+		Config.LastHit:addParam("SafeModeRange", "Limit range", SCRIPT_PARAM_SLICE, 1000, 1, 1000)
+	
+	Config:addSubMenu("LineClear", "LineClear")
+		Config.LineClear:addParam("Q", "Use Q in line clear", SCRIPT_PARAM_ONOFF, true)
+		Config.LineClear:addParam("W", "Use W in line clear", SCRIPT_PARAM_ONOFF, false)
+		Config.LineClear:addParam("E", "Use E in line clear", SCRIPT_PARAM_ONOFF, false)
+		Config.LineClear:addParam("LimitMana", "Use line clear if my mana >=", SCRIPT_PARAM_SLICE, 50, 1, 100)
+	
+	Config:addSubMenu("JungleClear", "JungleClear")
+		Config.JungleClear:addParam("Q", "Use Q in Jungle clear", SCRIPT_PARAM_ONOFF, true)
+		Config.JungleClear:addParam("W", "Use W in Jungle clear", SCRIPT_PARAM_ONOFF, false)
+		Config.JungleClear:addParam("E", "Use E in Jungle clear", SCRIPT_PARAM_ONOFF, false)
+		Config.JungleClear:addParam("LimitMana", "Use Jungle clear if my mana >=", SCRIPT_PARAM_SLICE, 50, 1, 100)
+	
+	Config:addSubMenu("KS Mode", "KSMode")
+		Config.KSMode:addParam("Q", "Killsteal with Q", SCRIPT_PARAM_ONOFF, true)
+		Config.KSMode:addParam("W", "Killsteal with W", SCRIPT_PARAM_ONOFF, true)
+		Config.KSMode:addParam("E", "Killsteal with E", SCRIPT_PARAM_ONOFF, true)
+		Config.KSMode:addParam("Ignite", "Killsteal with Ignite", SCRIPT_PARAM_ONOFF, true)
+	
+	Config:addSubMenu("Draw", "Draw")
+		CLib:AddToMenu(Config.Draw)
+	
+	Config:addSubMenu("Spell Settings", "SS")
+		Config.SS:addSubMenu("Q", "Q")
+			Q:AddToMenu(Config.SS.Q)
+		Config.SS:addSubMenu("W", "W")
+			W:AddToMenu(Config.SS.W)
+		Config.SS:addSubMenu("E", "E")
+			E:AddToMenu(Config.SS.E)
+		Config.SS:addSubMenu("R", "R")
+			R:AddToMenu(Config.SS.R)
+end
+
+function OnTick()
+	if (myHero.dead) then return end
+	if (Config.HarassT.HotKey) then HarassToggle() end
+	if (OLib:IsComboMode())then Combo()
+	elseif OLib:IsHarassMode() then Harass()
+	elseif OLib:IsLastHitMode() then LastHit()
+	elseif OLib:IsClearMode() then 
+		LineClear() 
+		JungleClear()
+	end
+end
+
+function Combo()
+	target = STS:GetTarget(Q.range)
+	targetR = STS:GetTarget(R.range + E.range)
+	if(target ~= nil) then
+		if(Config.Combo.E and GetDistance(target) < E.range and E:IsReady() )then E:Cast(target) end
+		if(Config.Combo.R and DLib:IsKillable(targetR, {_Q, _W, _E, _R}) and GetDistance(targetR) < E.range + R.range ) then R:Cast(target)  end
+		if(Config.Combo.Q and GetDistance(target) < Q.range and Q:IsReady() )then Q:Cast(target) end
+		if(Config.Combo.W and GetDistance(target) < W.range and W:IsReady() )then W:Cast() end
+	end
+end
+
+function Harass()
+	if(IsManaLow(Config.Harass.LimitMana)) then return end
+	target = STS:GetTarget(Q.range)
+	if(target~=nil)then
+		if(Config.Harass.E and E:IsReady())then
+			if(Config.Harass.EHitchance ~= 0)then E:Cast(target) return end
+			local SpellData = {}
+			SpellData.castPosition, SpellData.hitChance, SpellData.position = E:GetPrediction(target)
+			if(SpellData.hitChance >= Config.Harass.EHitchance)then
+				E:__Cast(SpellData.castPosition.x, SpellData.castPosition.z)
+			end
+		end
+		if(Config.Harass.Q and Q:IsReady() and GetDistance(target) < Q.range)then Q:Cast(target) end
+		if(Config.Harass.W and W:IsReady() and GetDistance(target) < W.range)then W:Cast(target) end
+	end
+end
+
+function HarassToggle()
+	if(IsManaLow(Config.HarassT.LimitMana)) then return end
+	local target = STS:GetTarget()
+	if(target~=nil)then
+		if(Config.HarassT.Q)then Q:Cast(target) end
+		if(Config.HarassT.W)then W:Cast(target) end
+		if(Config.HarassT.E)then E:Cast(target) end
+	end
+end
+
+function LastHit()
+	if(not Config.LastHit.Q)then return end
+	if(IsManaLow(Config.LastHit.LimitMana))then return end
+	enemyMinion:update()
+	if(Config.LastHit.SafeMode)then
+		for index, enemy in ipairs(GetEnemyHeroes()) do
+			if(GetDistance(enemy) < Config.LastHit.SafeModeRange)then return end
+		end
+	end
+	for index, minion in ipairs(enemyMinion.objects) do
+		if(DLib:IsKillable(minion,{_Q}) and GetDistance(minion) < Q.range ) then 
+			local CastPosition, Hitchance, position = Q:GetPrediction(minion)
+			if(CastPosition ~= nil)then
+				Q:Cast(CastPosition.x, CastPosition.z)
+			end
+		end
+	end
+end
+
+function LineClear()
+	if(IsManaLow(Config.LineClear.LimitMana))then return end
+	enemyMinion:update()
+	if(Config.LineClear.Q) then
+		local BestPos, BestHit, BestObj = GetBestLineFarmPosition(Q.range, 100, enemyMinion.objects, myHero)
+		if(BestPos ~= nil)then
+			Q:Cast(BestPos.x, BestPos.z)
+		end
+	end
+	if(Config.LineClear.W and CountObjectsNearPos(myHero, 70, 70, enemyMinion.objects) > 1) then
+		W:Cast(minion) 
+	end
+	if(Config.LineClear.E) then 
+		--E:Cast(minion) 
+	end
+end
+
+--JungleClear
+
+function JungleClear()
+	if(IsManaLow(Config.JungleClear.LimitMana))then return end
+	enemyJungle:update()
+	if(Config.JungleClear.Q) then
+		local BestPos, BestHit, BestObj = GetBestLineFarmPosition(Q.range, 100, enemyJungle.objects, myHero)
+		if(BestPos ~= nil)then
+			Q:Cast(BestPos.x, BestPos.z)
+		end
+	end
+	if(Config.JungleClear.W and CountObjectsNearPos(myHero, 70, 70, enemyJungle.objects) > 1) then
+		W:Cast(minion) 
+	end
+	if(Config.JungleClear.E) then 
+		--E:Cast(minion) 
+	end
+end
+
+
+function KillSteal()
+	local target = STS:GetTarget(Q.range, 1, STS_LOW_HP_PRIORITY)
+	if(Config.KSMode.Q and DLib:IsKillable(target,{_Q}) and Q:IsReady() and GetDistance(target) < Q.range) then Q:Cast(target) end
+	if(Config.KSMode.W and DLib:IsKillable(target,{_W}) and W:IsReady() and GetDistance(target) < W.range) then W:Cast(target) end
+	if(Config.KSMode.E and DLib:IsKillable(target,{_E}) and E:IsReady() and GetDistance(target) < E.range) then E:Cast(target) end
+end
+
+function IsManaLow(per)
+	return ((myHero.mana / myHero.maxMana * 100) <= per)
+end
+
+function GetBestCircularFarmPosition(range, radius, objects)
+    local BestPos 
+    local BestHit = 0
+    for i, object in ipairs(objects) do
+        local hit = CountObjectsNearPos(object.pos or object, range, radius, objects)
+        if hit > BestHit then
+            BestHit = hit
+            BestPos = Vector(object)
+            if BestHit == #objects then
+               break
+            end
+         end
+    end
+    return BestPos, BestHit
+end
+
+function GetBestLineFarmPosition(range, width, objects, from)
+    local BestPos 
+	local _from = from or myHero
+    local BestHit = 0
+    for i, object in ipairs(objects) do
+        local EndPos = Vector(_from.pos) + range * (Vector(object) - Vector(_from.pos)):normalized()
+        local hit = CountObjectsOnLineSegment(_from.pos, EndPos, width, objects)
+        if hit > BestHit then
+            BestHit = hit
+            BestPos = Vector(object)
+			BestObj = object
+            if BestHit == #objects then
+               break
+            end
+         end
+    end
+    return BestPos, BestHit, BestObj
+end
+
+function CountObjectsOnLineSegment(StartPos, EndPos, width, objects)
+    local n = 0
+    for i, object in ipairs(objects) do
+        local pointSegment, pointLine, isOnSegment = VectorPointProjectionOnLineSegment(StartPos, EndPos, object)
+        if isOnSegment and GetDistanceSqr(pointSegment, object) < width * width then
+            n = n + 1
+        end
+    end
+    return n
+end
+
+function CountObjectsNearPos(pos, range, radius, objects)
+    local n = 0
+    for i, object in ipairs(objects) do
+        if GetDistanceSqr(pos, object) <= radius * radius then
+            n = n + 1
+        end
+    end
+    return n
+end
