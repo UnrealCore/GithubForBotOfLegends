@@ -29,7 +29,7 @@ else
 end
 
 ---------------------------------------------------------------------
-local ScriptVersion = 1.0
+local ScriptVersion = 1.1
 SimpleUpdater("[AhriCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.lua" , SCRIPT_PATH .. "AhriCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.version" ):CheckUpdate()
 
 local Q, W, E, R, Ignite
@@ -79,7 +79,7 @@ function OnLoad()
 		Config.Combo:addParam("Q", "Use Q in combo mode", SCRIPT_PARAM_ONOFF, true)
 		Config.Combo:addParam("W", "Use W in combo mode", SCRIPT_PARAM_ONOFF, true)
 		Config.Combo:addParam("E", "Use E in combo mode", SCRIPT_PARAM_ONOFF, true)
-		Config.Combo:addParam("R", "Use E + R in combo mode", SCRIPT_PARAM_ONOFF, true)
+		--Config.Combo:addParam("R", "Use E + R in combo mode", SCRIPT_PARAM_ONOFF, true)
 	
 	Config:addSubMenu("Harass", "Harass")
 		Config.Harass:addParam("Q", "Use Q in harass mode", SCRIPT_PARAM_ONOFF, true)
@@ -120,6 +120,17 @@ function OnLoad()
 		Config.KSMode:addParam("E", "Killsteal with E", SCRIPT_PARAM_ONOFF, true)
 		--Config.KSMode:addParam("Ignite", "Killsteal with Ignite", SCRIPT_PARAM_ONOFF, true)
 	
+	Config:addSubMenu("Free", "Free")
+		Config.Free:addParam("Q", "Use Q in free mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Free:addParam("E", "Use E in free mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Free:addParam("R", "Use R in free mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Free:addParam("HotKey", "HotKey", SCRIPT_PARAM_ONKEYDOWN, false, string.byte('G'))
+	
+	Config:addSubMenu("AutoR", "AutoR")
+		Config.AutoR:addParam("UseInCombo", "Use R when combo kill in combo mode", SCRIPT_PARAM_ONKEYTOGGLE,false, string.byte('U'))
+		--Config.AutoR:addParam()
+
+	
 	Config:addSubMenu("Draw", "Draw")
 		CLib:AddToMenu(Config.Draw)
 	
@@ -144,16 +155,30 @@ function OnTick()
 		LineClear() 
 		JungleClear()
 	end
+	if(Config.Free.HotKey) then Free() end
+	RCombo()
 end
 
 function Combo()
 	target = STS:GetTarget(Q.range)
-	targetR = STS:GetTarget(R.range + E.range)
+	--targetR = STS:GetTarget(R.range + E.range)
 	if(target ~= nil) then
 		if(Config.Combo.E and GetDistance(target) < E.range and E:IsReady() )then E:Cast(target) end
-		if(Config.Combo.R and DLib:IsKillable(targetR, {_Q, _W, _E, _R}) and GetDistance(targetR) < E.range + R.range ) then R:Cast(target)  end
+		--
 		if(Config.Combo.Q and GetDistance(target) < Q.range and Q:IsReady() )then Q:Cast(target) end
 		if(Config.Combo.W and GetDistance(target) < W.range and W:IsReady() )then W:Cast() end
+	end
+end
+
+function RCombo()
+	target = STS:GetTarget(Q.range + E.range)
+	if(Config.AutoR.UseInCombo and DLib:IsKillable(targetR, {_Q, _W, _E, _R}) and GetDistance(targetR) < E.range + R.range and target ~= nil ) then
+		if(GetDistance(target) < 200) then
+			pos = Extends2(target, myHero, 450)
+			R:Cast(pos.x, pos.z) 
+		else
+			R:Cast(target) 
+		end
 	end
 end
 
@@ -176,7 +201,7 @@ end
 
 function HarassToggle()
 	if(IsManaLow(Config.HarassT.LimitMana)) then return end
-	local target = STS:GetTarget()
+	local target = STS:GetTarget(R.range)
 	if(target~=nil)then
 		if(Config.HarassT.Q)then Q:Cast(target) end
 		if(Config.HarassT.W)then W:Cast(target) end
@@ -248,7 +273,128 @@ function KillSteal()
 end
 
 function IsManaLow(per)
+	if per == nil then return false end
 	return ((myHero.mana / myHero.maxMana * 100) <= per)
+end
+
+function Free()
+	myHero:MoveTo(mousePos.x, mousePos.z)
+	length, overWall = GetWallData(Vector(myHero), Vector(mousePos), 450)
+	--GetWallLength(Vector(myHero), Vector(mousePos))
+	--overWall = IsOverWall(Vector(myHero), Extends2(myHero, mousePos, 450))
+	target = STS:GetTarget(Q.range, 1, STS_CLOSEST)
+	
+	if(Config.Free.Q)then
+		if(target~=nil)then
+			Q:Cast(target)
+		else
+			pos = Extends(Vector(myHero), mousePos, Q.range)
+			Q:Cast(pos.x, pos.z)
+		end
+	end
+	
+	if(overWall and Config.Free.R)then
+		local pos = Extends(Vector(myHero), mousePos, R.range)
+		R:Cast(pos.x, pos.z)
+	end
+	
+	if(Config.Free.E)then
+		local collection = {}
+		for index, enemy in ipairs(GetEnemyHeroes())do
+			if(GetDistance(enemy) < E.range)then
+				table.insert(collection, enemy)
+			end
+		end
+	
+		table.sort(collection, function(a, b) return GetDistance(a) < GetDistance(b) end)
+		for index, enemy in ipairs(collection)do
+			E:Cast(enemy)
+		end
+	end
+end
+
+function GetWallData(sPos, ePos, limitCheck)
+	distance = GetDistance(sPos, ePos)
+	Boolean = false
+	fPos = 0
+	lPos = 0
+	for i = 0, distance, 10 do
+		tempPos = Extends(sPos, ePos, i)
+		if(IsWall(D3DXVECTOR3(tempPos.x, tempPos.y, tempPos.z)) and fPos == 0)then
+			fPos = tempPos
+		end
+		lPos = tempPos
+		if(not IsWall(D3DXVECTOR3(lPos.x, lPos.y, lPos.z)) and fPos ~= 0)then
+			if(i < limitCheck)then Boolean = true end
+			break
+		end
+	end
+	if(fPos ==0 ) then fPos = Vector(0, 0, 0) end
+	return GetDistance(fPos, lPos), Boolean
+end
+
+function GetWallPoint(startPos, endPos)
+	distance = GetDistance(startPos, endPos)
+	for i = 0, distance, 10 do
+		tempPos = Extends(startPos, endPos, i)
+		if(IsWall(D3DXVECTOR3(tempPos.x, tempPos.y, tempPos.z)))then
+			return Extends(tempPos, startPos, -35)
+		end
+	end
+end
+
+function IsOverWall(sPos, ePos)
+	distance = GetDistance(sPos, ePos)
+	fPos = 0
+	lPos = 0
+	for i = 0, distance, 10 do
+		tempPos = Extends(sPos, ePos, i)
+		if(IsWall(D3DXVECTOR3(tempPos.x, tempPos.y, tempPos.z)) and fPos == 0)then
+			fPos = tempPos
+		end
+		lPos = tempPos
+		if(not IsWall(D3DXVECTOR3(lPos.x, lPos.y, lPos.z)) and fPos ~= 0)then
+			return true
+		end
+	end
+	return false
+end
+
+function GetWallLength(sPos, ePos)
+	distance = GetDistance(sPos, ePos)
+	fPos = 0
+	lPos = 0
+	for i = 0, distance, 10 do
+		tempPos = Extends(sPos, ePos, i)
+		if(IsWall(D3DXVECTOR3(tempPos.x, tempPos.y, tempPos.z)) and fPos == 0)then
+			fPos = tempPos
+		end
+		lPos = tempPos
+		if(not IsWall(D3DXVECTOR3(lPos.x, lPos.y, lPos.z)) and fPos ~= 0)then
+			break
+		end
+	end
+	if(fPos ==0 ) then fPos = Vector(0, 0, 0) end
+	return GetDistance(fPos, lPos)
+end
+
+function GetFirstWallPoint(sPos, ePos)
+	distance = GetDistance(sPos, ePos)
+	for i = 0, distance, 10 do
+		tempPos = Extends(sPos, ePos, i)
+		if(IsWall(D3DXVECTOR3(tempPos.x, tempPos.y, tempPos.z)))then
+			return Extends(tempPos, sPos, -35)
+		end
+	end
+	return Vector(0, 0, 0)
+end
+
+function Extends(v1, v2, v3)
+	return Vector(v1) + (Vector(v2) - Vector(v1)):normalized() * v3
+end
+
+function Extends2(v1, v2, v3)
+	return Vector(v1) + (Vector(v2) - Vector(v1)):normalized() * (GetDistance(v1, v2)+v3)
 end
 
 function GetBestCircularFarmPosition(range, radius, objects)
