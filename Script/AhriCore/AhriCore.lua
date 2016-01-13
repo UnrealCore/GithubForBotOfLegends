@@ -29,7 +29,7 @@ else
 end
 
 ---------------------------------------------------------------------
-local ScriptVersion = 1.1
+local ScriptVersion = 1.2
 SimpleUpdater("[AhriCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.lua" , SCRIPT_PATH .. "AhriCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.version" ):CheckUpdate()
 
 local Q, W, E, R, Ignite
@@ -94,6 +94,7 @@ function OnLoad()
 		Config.HarassT:addParam("Q", "Use Q in harass toggle mode", SCRIPT_PARAM_ONOFF, true)
 		Config.HarassT:addParam("W", "Use W in harass toggle mode", SCRIPT_PARAM_ONOFF, false)
 		Config.HarassT:addParam("E", "Use E in harass toggle mode", SCRIPT_PARAM_ONOFF, false)
+		Config.HarassT:addParam("LimitMana", "Use harass if my mana >=", SCRIPT_PARAM_SLICE, 50, 1, 100)
 		Config.HarassT:addParam("HotKey", "Use Harass toggle key", SCRIPT_PARAM_ONKEYTOGGLE, false, string.byte('T'))
 	
 	Config:addSubMenu("LastHit", "LastHit")
@@ -120,14 +121,14 @@ function OnLoad()
 		Config.KSMode:addParam("E", "Killsteal with E", SCRIPT_PARAM_ONOFF, true)
 		--Config.KSMode:addParam("Ignite", "Killsteal with Ignite", SCRIPT_PARAM_ONOFF, true)
 	
-	Config:addSubMenu("Free", "Free")
-		Config.Free:addParam("Q", "Use Q in free mode", SCRIPT_PARAM_ONOFF, true)
-		Config.Free:addParam("E", "Use E in free mode", SCRIPT_PARAM_ONOFF, true)
-		Config.Free:addParam("R", "Use R in free mode", SCRIPT_PARAM_ONOFF, true)
-		Config.Free:addParam("HotKey", "HotKey", SCRIPT_PARAM_ONKEYDOWN, false, string.byte('G'))
+	Config:addSubMenu("Flee", "Flee")
+		Config.Flee:addParam("Q", "Use Q in Flee mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Flee:addParam("E", "Use E in Flee mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Flee:addParam("R", "Use R in Flee mode", SCRIPT_PARAM_ONOFF, true)
+		Config.Flee:addParam("HotKey", "HotKey", SCRIPT_PARAM_ONKEYDOWN, false, string.byte('G'))
 	
 	Config:addSubMenu("AutoR", "AutoR")
-		Config.AutoR:addParam("UseInCombo", "Use R when combo kill in combo mode", SCRIPT_PARAM_ONKEYTOGGLE,false, string.byte('U'))
+		Config.AutoR:addParam("UseInCombo", "Use R when combo kill in combo mode", SCRIPT_PARAM_ONKEYTOGGLE, false, string.byte('U'))
 		--Config.AutoR:addParam()
 
 	
@@ -155,7 +156,7 @@ function OnTick()
 		LineClear() 
 		JungleClear()
 	end
-	if(Config.Free.HotKey) then Free() end
+	if(Config.Flee.HotKey) then Flee() end
 	RCombo()
 end
 
@@ -219,7 +220,7 @@ function LastHit()
 		end
 	end
 	for index, minion in ipairs(enemyMinion.objects) do
-		if(DLib:IsKillable(minion,{_Q}) and GetDistance(minion) < Q.range ) then 
+		if(DLib:IsKillable(minion,{_Q}) and GetDistance(minion) < Q.range) then 
 			local CastPosition, Hitchance, position = Q:GetPrediction(minion)
 			if(CastPosition ~= nil)then
 				Q:Cast(CastPosition.x, CastPosition.z)
@@ -233,7 +234,7 @@ function LineClear()
 	enemyMinion:update()
 	if(Config.LineClear.Q) then
 		local BestPos, BestHit, BestObj = GetBestLineFarmPosition(Q.range, 100, enemyMinion.objects, myHero)
-		if(BestPos ~= nil)then
+		if(BestPos ~= nil and GetDistance(BestPos) < Q.range)then
 			Q:Cast(BestPos.x, BestPos.z)
 		end
 	end
@@ -252,7 +253,7 @@ function JungleClear()
 	enemyJungle:update()
 	if(Config.JungleClear.Q) then
 		local BestPos, BestHit, BestObj = GetBestLineFarmPosition(Q.range, 100, enemyJungle.objects, myHero)
-		if(BestPos ~= nil)then
+		if(BestPos ~= nil and GetDistance(BestPos) < Q.range )then
 			Q:Cast(BestPos.x, BestPos.z)
 		end
 	end
@@ -277,14 +278,14 @@ function IsManaLow(per)
 	return ((myHero.mana / myHero.maxMana * 100) <= per)
 end
 
-function Free()
+function Flee()
 	myHero:MoveTo(mousePos.x, mousePos.z)
 	length, overWall = GetWallData(Vector(myHero), Vector(mousePos), 450)
 	--GetWallLength(Vector(myHero), Vector(mousePos))
 	--overWall = IsOverWall(Vector(myHero), Extends2(myHero, mousePos, 450))
 	target = STS:GetTarget(Q.range, 1, STS_CLOSEST)
 	
-	if(Config.Free.Q)then
+	if(Config.Flee.Q)then
 		if(target~=nil)then
 			Q:Cast(target)
 		else
@@ -293,12 +294,12 @@ function Free()
 		end
 	end
 	
-	if(overWall and Config.Free.R)then
+	if(overWall and Config.Flee.R)then
 		local pos = Extends(Vector(myHero), mousePos, R.range)
 		R:Cast(pos.x, pos.z)
 	end
 	
-	if(Config.Free.E)then
+	if(Config.Flee.E)then
 		local collection = {}
 		for index, enemy in ipairs(GetEnemyHeroes())do
 			if(GetDistance(enemy) < E.range)then
