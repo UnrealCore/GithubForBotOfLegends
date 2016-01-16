@@ -4,7 +4,7 @@ if myHero.charName ~= "Ahri" then return end
 
 	just check for SourceLibk renamed to SourceLib_Fix
 	
-	navermind
+	nevermind
 
 ]]
 
@@ -19,17 +19,17 @@ function file_check(file_name)
 	return file_found
 end
 
-if(file_check(LIB_PATH.."SourceLibk.lua")) then
-	require 'SourceLibk';
-elseif(file_check(LIB_PATH.."SourceLib_Fix.lua")) then
+if(file_check(LIB_PATH.."SourceLib_Fix.lua")) then
 	require 'SourceLib_Fix';
+elseif(file_check(LIB_PATH.."Sourcelibk.lua")) then
+	require 'Sourcelibk';
 else
 	print("AhriCore: Download Sourcelibk")
 	return;
 end
 
 ---------------------------------------------------------------------
-local ScriptVersion = 1.2
+local ScriptVersion = 1.3
 SimpleUpdater("[AhriCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.lua" , SCRIPT_PATH .. "AhriCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.version" ):CheckUpdate()
 
 local Q, W, E, R, Ignite
@@ -40,6 +40,7 @@ local Config = scriptConfig("AhriCore", "AhriCore")
 local DLib = DamageLib()
 local CLib = DrawManager()
 local enemyMinion, enemyJungle
+local Walldata = nil
 
 function OnLoad()
 	Q = Spell(_Q, 965)
@@ -171,6 +172,14 @@ function Combo()
 	end
 end
 
+function OnDraw()
+	if Walldata ~= nil then
+		DrawCircle(Walldata.fPos.x, Walldata.fPos.y, Walldata.fPos.z, 100, ARGB(100, 255, 0, 0))
+		DrawCircle(Walldata.lPos.x, Walldata.lPos.y, Walldata.lPos.z, 100, ARGB(100, 255, 0, 0))
+		Walldata = nil
+	end
+end
+
 function RCombo()
 	target = STS:GetTarget(Q.range + E.range)
 	if(Config.AutoR.UseInCombo and DLib:IsKillable(targetR, {_Q, _W, _E, _R}) and GetDistance(targetR) < E.range + R.range and target ~= nil ) then
@@ -279,11 +288,15 @@ function IsManaLow(per)
 end
 
 function Flee()
-	myHero:MoveTo(mousePos.x, mousePos.z)
-	length, overWall = GetWallData(Vector(myHero), Vector(mousePos), 450)
+	Walldata = GetWallData(Vector(myHero), Vector(mousePos), 450)
 	--GetWallLength(Vector(myHero), Vector(mousePos))
 	--overWall = IsOverWall(Vector(myHero), Extends2(myHero, mousePos, 450))
 	target = STS:GetTarget(Q.range, 1, STS_CLOSEST)
+	if(Walldata == nil or Walldata.fPos == nil or not Walldata.IsOverWall or not (GetDistance(Walldata.fPos, Walldata.lPos) < 500) or not R:IsReady() ) then
+		myHero:MoveTo(mousePos.x, mousePos.z)
+	else
+		myHero:MoveTo(Walldata.fPos.x, Walldata.fPos.z)
+	end
 	
 	if(Config.Flee.Q)then
 		if(target~=nil)then
@@ -294,7 +307,7 @@ function Flee()
 		end
 	end
 	
-	if(overWall and Config.Flee.R)then
+	if(Walldata.IsOverWall and Config.Flee.R)then
 		local pos = Extends(Vector(myHero), mousePos, R.range)
 		R:Cast(pos.x, pos.z)
 	end
@@ -331,7 +344,13 @@ function GetWallData(sPos, ePos, limitCheck)
 		end
 	end
 	if(fPos ==0 ) then fPos = Vector(0, 0, 0) end
-	return GetDistance(fPos, lPos), Boolean
+	_r = {
+		fPos = fPos,
+		lPos = lPos,
+		IsOverWall = Boolean,
+		distance = GetDistance(fPos, lPos)
+	}
+	return _r
 end
 
 function GetWallPoint(startPos, endPos)
