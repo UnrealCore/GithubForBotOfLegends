@@ -33,7 +33,7 @@ else
 	return
 end
 
-local VERSION = 1.0
+local VERSION = 1.1
 SimpleUpdater("[ZedCore]", VERSION, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.lua" , SCRIPT_PATH .. "ZedCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.version" ):CheckUpdate()
 
 local DangerousList = {
@@ -135,14 +135,6 @@ function Main:Initialization()
 	self.E = Spell(_E, 270)
 	self.R = Spell(_R, 650)
 	
-	self.Bilge = Item(3144, 475, "Bilgewatercutlass")
-	self.Blade = Item(3153, 425, "itemswordoffeastandfamine")
-	self.Hydra = Item(3074, 250)
-	self.Tiamat = Item(3077, 250)
-	self.Rand = Item(3143, 490)
-	self.Lotis = Item(3190, 590)
-	self.Youmuu = Item(3142, 10, "Youmusblade")
-	
 	self.LastCast = nil
 	self.Shadow = {}
 	
@@ -160,9 +152,9 @@ function Main:Initialization()
 	DLib:RegisterDamageSource(_Bilge, _MAGIC, 100, 0, _MAGIC, _AP, 0, function() return self.Blade:IsReady() end)
 	
 	self.IgniteSlot = GetSummonerSlot("summonerdot")
-	_IGNITE = self.IgniteSlot
+	-- _IGNITE = self.IgniteSlot
 	
-	self.IGNITE = Spell(_IGNITE, 600)
+	self.IGNITE = Spell(self.IgniteSlot, 600)
 	
 	self.Config = scriptConfig(ScriptName, ScriptName)
 	
@@ -189,22 +181,6 @@ function Main:Initialization()
 		--self.Config.Harass:addParam("UseItem", "Use Tiamat/Hydra", SCRIPT_PARAM_ONOFF, true)
 		self.Config.Harass:addParam("UseW", "Use W", SCRIPT_PARAM_ONOFF, true)
 	
-	-- self.Config:addSubMenu("Items", "Items")
-		-- self.Config.Items:addSubMenu("Offensive", "Offensive")
-			-- self.Config.Items.Offensive:addParam("Youmuu", "Use Youmuu", SCRIPT_PARAM_ONOFF, true)
-			-- self.Config.Items.Offensive:addParam("Tiamat", "Use Tiamat", SCRIPT_PARAM_ONOFF, true)
-			-- self.Config.Items.Offensive:addParam("Hydra", "Use Hydra", SCRIPT_PARAM_ONOFF, true)
-			-- self.Config.Items.Offensive:addParam("Bilge", "Use Bilge", SCRIPT_PARAM_ONOFF, true)
-			-- self.Config.Items.Offensive:addParam("BilgeEnemyHP", "If Enemy HP <", SCRIPT_PARAM_SLICE, 85, 1, 100)
-			-- self.Config.Items.Offensive:addParam("BilgeMyHP", "Or myHero's HP <", SCRIPT_PARAM_SLICE, 85, 1, 100)
-			-- self.Config.Items.Offensive:addParam("Blade", "Use Blade", SCRIPT_PARAM_ONOFF, true)
-			-- self.Config.Items.Offensive:addParam("BladeEnemyHP", "If Enemy HP <", SCRIPT_PARAM_SLICE, 85, 1, 100)
-			-- self.Config.Items.Offensive:addParam("BladeMyHP", "Or myHero's HP <", SCRIPT_PARAM_SLICE, 85, 1, 100)
-		-- self.Config.Items:addSubMenu("Deffensive", "Deffensive")
-			-- self.Config.Items.Deffensive:addParam("Omen", "Use Randuin Omen", SCRIPT_PARAM_ONOFF, true)
-			-- self.Config.Items.Deffensive:addParam("OmenEnemys", "Randuin If Enemys >", SCRIPT_PARAM_SLICE, 2, 1, 5)
-			-- self.Config.Items.Deffensive:addParam("lotis", "Use Iron Solari", SCRIPT_PARAM_ONOFF, true)
-			-- self.Config.Items.Deffensive:addParam("lotisminhp", "Solari if Ally HP <", SCRIPT_PARAM_SLICE, 35, 1, 100)
 	
 	self.Config:addSubMenu("LineClear", "LineClear")
 		--self.Config.LineClear:addParam("UseItem", "Use Hydra/Tiamat", SCRIPT_PARAM_ONOFF, true)
@@ -537,32 +513,6 @@ function Main:Killsteal()
 	end
 end
 
-
-function Main:UseItem(target)
-	if target == nil then return end
-	Bilge = self.Config.Items.Offensive.Bilge
-	BilgeEnemyHP = target.health <= target.maxHealth * (self.Config.Items.Offensive.BilgeEnemyHP / 100)
-	BilgeMyHP = myHero.health <= myHero.maxHealth * (self.Config.Items.Offensive.BilgeMyHP / 100)
-	
-	if(GetDistance(target) <= 450 and Bilge and (BilgeEnemyHP or BilgeMyHP) and self.Bilge:IsReady())then
-		self.Bilge:Cast(target)
-	end
-	
-	if(GetDistance(target) <= 300 and self.Config.Items.Offensive.Tiamat and self.Tiamat:IsReady()) then
-		self.Tiamat:Cast()
-	end
-	
-	if(GetDistance(target) <= 300 and self.Config.Items.Offensive.Hydra and self.Hydra:IsReady()) then
-		self.Hydra:Cast()
-	end
-	
-	if(self.Config.Items.Deffensive.Omen and GetNearObjectCount(myHero, 450, GetEnemyHeroes()) >= self.Config.Items.Deffensive.OmenEnemys and self.Rand:IsReady())then
-		self.Rand:Cast()
-	end
-	if(GetDistance(target)<=350 and self.Config.Items.Offensive.Youmuu and self.Youmuu:IsReady())then
-		self.Youmuu:Cast()
-	end
-end
 
 function Main:UltStat()
 	if(self.R:GetName() == "ZedR")then
