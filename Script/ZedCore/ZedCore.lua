@@ -33,6 +33,9 @@ else
 	return
 end
 
+local VERSION = 1.0
+SimpleUpdater("[ZedCore]", VERSION, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.lua" , SCRIPT_PATH .. "ZedCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.version" ):CheckUpdate()
+
 local DangerousList = {
 	"AatroxQ",
 	"AhriSeduce",
