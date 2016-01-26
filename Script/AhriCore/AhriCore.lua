@@ -18,10 +18,7 @@ function file_check(file_name)
 	end
 	return file_found
 end
-
-if(file_check(LIB_PATH.."SourceLib_Fix.lua")) then
-	require 'SourceLib_Fix';
-elseif(file_check(LIB_PATH.."Sourcelibk.lua")) then
+if(file_check(LIB_PATH.."Sourcelibk.lua")) then
 	require 'Sourcelibk';
 else
 	print("AhriCore: Download Sourcelibk")
@@ -29,7 +26,7 @@ else
 end
 
 ---------------------------------------------------------------------
-local ScriptVersion = 1.3
+local ScriptVersion = 1.4
 SimpleUpdater("[AhriCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.lua" , SCRIPT_PATH .. "AhriCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.version" ):CheckUpdate()
 
 local Q, W, E, R, Ignite
@@ -49,10 +46,8 @@ function OnLoad()
 	E = Spell(_E, 965)
 	E:SetSkillshot(SKILLSHOT_LINEAR, 70, 0.2, 1000, true)
 	R = Spell(_R, 450)
-	_Ignite = GetSummonerSlot("summonerdot", myHero)
-	if(_Ignite ~= nil) then
-		Ignite = Spell(_Ignite, 450)
-	end
+	
+	IGNITE = IGNITE()
 	
 	enemyMinion = minionManager(MINION_ENEMY, Q.range, myHero, MINION_SORT_MAXHEALTH_DEC)
 	enemyJungle = minionManager(MINION_JUNGLE, Q.range, myHero, MINION_SORT_MAXHEALTH_DEC)
@@ -120,7 +115,7 @@ function OnLoad()
 		Config.KSMode:addParam("Q", "Killsteal with Q", SCRIPT_PARAM_ONOFF, true)
 		Config.KSMode:addParam("W", "Killsteal with W", SCRIPT_PARAM_ONOFF, true)
 		Config.KSMode:addParam("E", "Killsteal with E", SCRIPT_PARAM_ONOFF, true)
-		--Config.KSMode:addParam("Ignite", "Killsteal with Ignite", SCRIPT_PARAM_ONOFF, true)
+		Config.KSMode:addParam("Ignite", "Killsteal with Ignite", SCRIPT_PARAM_ONOFF, true)
 	
 	Config:addSubMenu("Flee", "Flee")
 		Config.Flee:addParam("Q", "Use Q in Flee mode", SCRIPT_PARAM_ONOFF, true)
@@ -135,6 +130,8 @@ function OnLoad()
 	
 	Config:addSubMenu("Draw", "Draw")
 		CLib:AddToMenu(Config.Draw)
+		Config.Draw:addParam("DrawWall", "Draw Wall Data", SCRIPT_PARAM_ONOFF, false)
+		Config.Draw:addParam("info", "Cause fps drop", SCRIPT_PARAM_INFO, "")
 	
 	Config:addSubMenu("Spell Settings", "SS")
 		Config.SS:addSubMenu("Q", "Q")
@@ -146,7 +143,6 @@ function OnLoad()
 		Config.SS:addSubMenu("R", "R")
 			R:AddToMenu(Config.SS.R)
 end
-
 function OnTick()
 	if (myHero.dead) then return end
 	if (Config.HarassT.HotKey) then HarassToggle() end
@@ -160,7 +156,6 @@ function OnTick()
 	if(Config.Flee.HotKey) then Flee() end
 	RCombo()
 end
-
 function Combo()
 	target = STS:GetTarget(Q.range)
 	--targetR = STS:GetTarget(R.range + E.range)
@@ -171,15 +166,13 @@ function Combo()
 		if(Config.Combo.W and GetDistance(target) < W.range and W:IsReady() )then W:Cast() end
 	end
 end
-
 function OnDraw()
-	if Walldata ~= nil then
+	if Walldata ~= nil and Config.Draw.DrawWall then
 		DrawCircle(Walldata.fPos.x, Walldata.fPos.y, Walldata.fPos.z, 100, ARGB(100, 255, 0, 0))
 		DrawCircle(Walldata.lPos.x, Walldata.lPos.y, Walldata.lPos.z, 100, ARGB(100, 255, 0, 0))
 		Walldata = nil
 	end
 end
-
 function RCombo()
 	target = STS:GetTarget(Q.range + E.range)
 	if(Config.AutoR.UseInCombo and DLib:IsKillable(targetR, {_Q, _W, _E, _R}) and GetDistance(targetR) < E.range + R.range and target ~= nil ) then
@@ -191,7 +184,6 @@ function RCombo()
 		end
 	end
 end
-
 function Harass()
 	if(IsManaLow(Config.Harass.LimitMana)) then return end
 	target = STS:GetTarget(Q.range)
@@ -208,7 +200,6 @@ function Harass()
 		if(Config.Harass.W and W:IsReady() and GetDistance(target) < W.range)then W:Cast(target) end
 	end
 end
-
 function HarassToggle()
 	if(IsManaLow(Config.HarassT.LimitMana)) then return end
 	local target = STS:GetTarget(R.range)
@@ -218,7 +209,6 @@ function HarassToggle()
 		if(Config.HarassT.E)then E:Cast(target) end
 	end
 end
-
 function LastHit()
 	if(not Config.LastHit.Q)then return end
 	if(IsManaLow(Config.LastHit.LimitMana))then return end
@@ -237,7 +227,6 @@ function LastHit()
 		end
 	end
 end
-
 function LineClear()
 	if(IsManaLow(Config.LineClear.LimitMana))then return end
 	enemyMinion:update()
@@ -254,9 +243,7 @@ function LineClear()
 		--E:Cast(minion) 
 	end
 end
-
 --JungleClear
-
 function JungleClear()
 	if(IsManaLow(Config.JungleClear.LimitMana))then return end
 	enemyJungle:update()
@@ -273,20 +260,17 @@ function JungleClear()
 		--E:Cast(minion) 
 	end
 end
-
-
 function KillSteal()
 	local target = STS:GetTarget(Q.range, 1, STS_LOW_HP_PRIORITY)
 	if(Config.KSMode.Q and DLib:IsKillable(target,{_Q}) and Q:IsReady() and GetDistance(target) < Q.range) then Q:Cast(target) end
 	if(Config.KSMode.W and DLib:IsKillable(target,{_W}) and W:IsReady() and GetDistance(target) < W.range) then W:Cast(target) end
 	if(Config.KSMode.E and DLib:IsKillable(target,{_E}) and E:IsReady() and GetDistance(target) < E.range) then E:Cast(target) end
+	if(Config.KSMode.Ignite and target.health <= IGNITE:GetDamage(target) and IGNITE:IsReady() and GetDistance(target) < IGNITE.range) then IGNITE:Cast(target) end
 end
-
 function IsManaLow(per)
 	if per == nil then return false end
 	return ((myHero.mana / myHero.maxMana * 100) <= per)
 end
-
 function Flee()
 	Walldata = GetWallData(Vector(myHero), Vector(mousePos), 450)
 	--GetWallLength(Vector(myHero), Vector(mousePos))
@@ -326,7 +310,6 @@ function Flee()
 		end
 	end
 end
-
 function GetWallData(sPos, ePos, limitCheck)
 	distance = GetDistance(sPos, ePos)
 	Boolean = false
@@ -352,7 +335,6 @@ function GetWallData(sPos, ePos, limitCheck)
 	}
 	return _r
 end
-
 function GetWallPoint(startPos, endPos)
 	distance = GetDistance(startPos, endPos)
 	for i = 0, distance, 10 do
@@ -362,7 +344,6 @@ function GetWallPoint(startPos, endPos)
 		end
 	end
 end
-
 function IsOverWall(sPos, ePos)
 	distance = GetDistance(sPos, ePos)
 	fPos = 0
@@ -379,7 +360,6 @@ function IsOverWall(sPos, ePos)
 	end
 	return false
 end
-
 function GetWallLength(sPos, ePos)
 	distance = GetDistance(sPos, ePos)
 	fPos = 0
@@ -397,7 +377,6 @@ function GetWallLength(sPos, ePos)
 	if(fPos ==0 ) then fPos = Vector(0, 0, 0) end
 	return GetDistance(fPos, lPos)
 end
-
 function GetFirstWallPoint(sPos, ePos)
 	distance = GetDistance(sPos, ePos)
 	for i = 0, distance, 10 do
@@ -408,15 +387,12 @@ function GetFirstWallPoint(sPos, ePos)
 	end
 	return Vector(0, 0, 0)
 end
-
 function Extends(v1, v2, v3)
 	return Vector(v1) + (Vector(v2) - Vector(v1)):normalized() * v3
 end
-
 function Extends2(v1, v2, v3)
 	return Vector(v1) + (Vector(v2) - Vector(v1)):normalized() * (GetDistance(v1, v2)+v3)
 end
-
 function GetBestCircularFarmPosition(range, radius, objects)
     local BestPos 
     local BestHit = 0
@@ -432,7 +408,6 @@ function GetBestCircularFarmPosition(range, radius, objects)
     end
     return BestPos, BestHit
 end
-
 function GetBestLineFarmPosition(range, width, objects, from)
     local BestPos 
 	local _from = from or myHero
@@ -451,7 +426,6 @@ function GetBestLineFarmPosition(range, width, objects, from)
     end
     return BestPos, BestHit, BestObj
 end
-
 function CountObjectsOnLineSegment(StartPos, EndPos, width, objects)
     local n = 0
     for i, object in ipairs(objects) do
@@ -462,7 +436,6 @@ function CountObjectsOnLineSegment(StartPos, EndPos, width, objects)
     end
     return n
 end
-
 function CountObjectsNearPos(pos, range, radius, objects)
     local n = 0
     for i, object in ipairs(objects) do
@@ -471,4 +444,19 @@ function CountObjectsNearPos(pos, range, radius, objects)
         end
     end
     return n
+end
+class('IGNITE')
+function IGNITE:__init()
+	self.slot = GetSummonerSlot("summonerdot")
+	self.range = 600
+end
+function IGNITE:IsReady()
+	if self.slot == nil then return false end
+	return myHero:CanUseSpell(self.slot) == READY
+end
+function IGNITE:GetDamage(target)
+	return 50 + 20 * myHero.level
+end
+function IGNITE:Cast(target)
+	CastSpell(self.slot, target)
 end
