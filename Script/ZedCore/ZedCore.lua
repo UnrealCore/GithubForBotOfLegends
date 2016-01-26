@@ -33,7 +33,7 @@ else
 	return
 end
 
-local VERSION = 1.1
+local VERSION = 1.2
 SimpleUpdater("[ZedCore]", VERSION, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.lua" , SCRIPT_PATH .. "ZedCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.version" ):CheckUpdate()
 
 local DangerousList = {
@@ -67,6 +67,11 @@ local DangerousList = {
 	"GnarR",
 	"FizzMarinerDoom",
 	"SyndraR",
+}
+
+local DONOTCASTDURINGHASTHISBUFFES = {
+	"JudicatorIntervention",
+	"UndyingRange",
 }
 
 local OWM = OrbWalkManager(ScriptName)
@@ -164,8 +169,8 @@ function Main:Initialization()
 	self.Config:addSubMenu("TargetSelecter", "TargetSelecter")
 		STS:AddToMenu(self.Config.TargetSelecter)
 	
-	self.Config:addSubMenu("DamageLib", "DamageLib")
-		DLib:AddToMenu(self.Config.DamageLib, {})
+	-- self.Config:addSubMenu("DamageLib", "DamageLib")
+		-- DLib:AddToMenu(self.Config.DamageLib, {})
 	
 	self.Config:addSubMenu("Draw", "Draw")
 		CM:AddToMenu(self.Config.Draw)
@@ -208,7 +213,7 @@ function Main:Initialization()
 		for _, e in ipairs(GetEnemyHeroes()) do
 			name = e:GetSpellData(_R).name;
 			if(Contain(DangerousList, name))then
-				self.Config.Misc:addParam("ds"..name, "Dodge "..name, SCRIPT_PARAM_ONOFF, true)
+				self.Config.Misc:addParam("dl"..name, "Dodge "..name, SCRIPT_PARAM_ONOFF, true)
 			end
 		end
 	
@@ -218,7 +223,7 @@ function Main:Initialization()
 	AddTickCallback(function() self:OnTick() end)
 	AddProcessSpellCallback(function(unit, spell) self:OnProcessSpell(unit, spell) end)
 	-- AddCreateObjCallback(function(obj) self:OnCreateObj(obj) end)
-	AddDrawCallback(function() self:Draw() end)
+	-- AddDrawCallback(function() self:Draw() end)
 	AddAnimationCallback(function(unit, anim) self:Anim(unit, anim) end)
 end
 
@@ -238,16 +243,10 @@ function Main:Anim(unit, anim)
 	-- print(unit.name.." : "..anim..)
 end
 
-function Main:Draw()
-	-- if(self:WShadow())then
-		-- DrawCircle(self:WShadow().x, self:WShadow().y, self:WShadow().z, 100, ARGB(100, 255, 0, 0))
-	-- end
-end
-
 function Main:OnProcessSpell(unit, spell)
 	if(unit.type ~= myHero.type)then return end
 	if(unit.team ~= myHero.team)then
-		if(self.Config.Misc.rdodge and self.R:IsReady() and self:UltStat() == 1 and self.Config.Misc["ds"..spell.name])then
+		if(self.Config.Misc.rdodge and self.R:IsReady() and self:UltStat() == 1 and self.Config.Misc["dl"..spell.name])then
 			if(Contain(DangerousList, spell.name) and (GetDistance(unit) < 650 or GetDistance(spell.endPos) <= 250))then
 				if(spell.name == "SyndraR")then
 					self.clockon = GetTickCount() + 150
@@ -264,19 +263,19 @@ function Main:OnProcessSpell(unit, spell)
 	if(unit.isMe and spell.name == "zedult")then
 		self.tickock = GetTickCount() + 200;
 	end
-	if(unit.isMe)then
-		self.LastCast = spell
-	end
+	-- if(unit.isMe)then
+		-- self.LastCast = spell
+	-- end
 	if(spell.name == self.R:GetName())then
 		self.rpos = Vector(spell.startPos)
 	end
 end
 
-function Main:OnCreateObj(obj)
+-- function Main:OnCreateObj(obj)
 	-- if(obj.name == "Shadow")then
 		-- table.insert(self.Shadow, obj)
 	-- end
-end
+-- end
 
 function Main:OnTick()
 	if(OWM:IsComboMode())then
@@ -306,33 +305,33 @@ function Main:GetComboDamage(enemy)
 	damage = 0;
 	damage = damage + DLib:CalcComboDamage(enemy, {_Q, _E, _R})
 	if(self.W:IsReady())then
-		damage = damage + DLib:CalcComboDamage(enemy, {_Q})/2
+		damage = damage + DLib:CalcSpellDamage(enemy, _Q)/2
 	end
-	if(self.Tiamat:IsReady())then
+	-- if(self.Tiamat:IsReady())then
 		-- damage = damage +
-	end
-	if(self.Hydra:IsReady())then
+	-- end
+	-- if(self.Hydra:IsReady())then
 		-- damage = damage + 
-	end
-	if(self.Blade:IsReady())then
-		local AddDamage
-		if((enemy.maxHealth * 0.1) > 100) then
-			AddDamage = enemy.maxHealth * 0.1
-		else
-			AddDamage = 100
-		end
-		damage = damage + AddDamage
-	end
-	damage = damage + (self.R:GetLevel() * 0.15 + 0.05 ) * ( damage - IgniteDamage())
+	-- end
+	-- if(self.Blade:IsReady())then
+		-- local AddDamage
+		-- if((enemy.maxHealth * 0.1) > 100) then
+			-- AddDamage = enemy.maxHealth * 0.1
+		-- else
+			-- AddDamage = 100
+		-- end
+		-- damage = damage + AddDamage
+	-- end
+	damage = damage + (self.R:GetLevel() * 0.15 + 0.05 ) * damage 
 	return damage
 end
 
 function Main:Combo()
-	local target = STS:GetTarget(1400)
+	local target = GetTarget() or STS:GetTarget(1400)
 	if target == nil then return end
 	local overkill = DLib:CalcComboDamage(target, {_Q, _E}) + getDmg("AD", target , myHero) * 2
 	
-	if(self.Config.Combo.UseUlt and self.R:IsReady() and self:UltStat() == 1 and (overkill > target.health or (not self.W:IsReady() and DLib:CalcComboDamage(target, {_Q}) < target.health and GetDistance(target) > 400)))then
+	if(self.Config.Combo.UseUlt and self.R:IsReady() and self:UltStat() == 1 and not self:CanDamaged(target) and (overkill > target.health or (not self.W:IsReady() and DLib:CalcSpellDamage(target, _Q) < target.health and GetDistance(target) > 400)))then
 		if((GetDistance(target) > 700 and target.ms > myHero.ms or GetDistance(Vector(target)) > 800 )) then
 			self:CastW(target);
 			self.W:Cast()
@@ -360,7 +359,7 @@ function Main:Combo()
 end
 
 function Main:TheLine()
-	local target = STS:GetTarget(1400)
+	local target = GetTarget() or STS:GetTarget(1400)
 	
 	if(target == nil)then
 		OrbwalkToPosition(mousePos)
@@ -374,7 +373,7 @@ function Main:TheLine()
 	
 	linepos = Extends(target, myHero, -500)
 	
-	if(target ~= nil and self:ShadowStage() == 1 and self:UltStat() == 2)then --  
+	if(target ~= nil and not self:CanDamaged(target) and  self:ShadowStage() == 1 and self:UltStat() == 2)then --  
 		-- self:UseItem(target);
 		-- if(self.LastCast.name ~= self.W:GetName())then
 			self.W:Cast(linepos);
@@ -393,7 +392,7 @@ function Main:TheLine()
 end
 
 function Main:Harass()
-	local target = STS:GetTarget(1400)
+	local target = GetTarget() or STS:GetTarget(1400)
 	if target == nil then return end
 	if(target and self.Config.Harass.longhar and self.Q:IsReady() and self.W:IsReady() and myHero.mana > myHero:GetSpellData(_Q).mana + myHero:GetSpellData(_W).mana and GetDistance(target) > 850 and GetDistance(target) < 1400 ) then
 		self:CastW(target)
@@ -427,7 +426,7 @@ function Main:LineClear()
 			self.Q:Cast(pos.x, pos.z)
 		else
 			for _, m in ipairs(self.minionTable.objects) do
-				if(not (GetMyTryeRange() > GetDistance(m)) and m.health < 0.75*DLib:CalcComboDamage(m, {_Q}))then
+				if(not (GetMyTryeRange() > GetDistance(m)) and m.health < 0.75*DLib:CalcSpellDamage(m, _Q))then
 					self.Q:Cast(pos.x, pos.z)
 				end
 			end
@@ -439,7 +438,7 @@ function Main:LineClear()
 			self.E:Cast()
 		else
 			for _, m in ipairs(self.minionTable.objects) do
-				if(not (GetMyTryeRange() > GetDistance(m)) and m.health < 0.75*DLib:CalcComboDamage(m, {_E}))then
+				if(not (GetMyTryeRange() > GetDistance(m)) and m.health < 0.75*DLib:CalcSpellDamage(m, _E))then
 					self.E:Cast()
 				end
 			end
@@ -455,12 +454,12 @@ function Main:LastHit()
 	if not mana then return end
 	
 	for _, minion in ipairs(self.minionTable.objects)do
-		if(self.Config.LastHit.UseQ and self.Q:IsReady() and GetDistance(minion) < self.Q.range and minion.health < 0.75 * DLib:CalcComboDamage(minion, {_Q}))then
+		if(self.Config.LastHit.UseQ and self.Q:IsReady() and GetDistance(minion) < self.Q.range and minion.health < 0.75 * getDmg("Q", minion, myHero))then --DLib:CalcSpellDamage(minion, _Q)
 			self.Q:SetSourcePosition(myHero)
 			self.Q:Cast(minion)
 		end
 		
-		if(self.Config.LastHit.UseQ and self.E:IsReady() and GetDistance(minion) < self.E.range and minion.health < 0.75 * DLib:CalcComboDamage(minion, {_E}))then
+		if(self.Config.LastHit.UseQ and self.E:IsReady() and GetDistance(minion) < self.E.range and minion.health < 0.75 * getDmg("E", minion, myHero))then -- DLib:CalcSpellDamage(minion, _E)
 			self.E:Cast()
 		end
 	end
@@ -485,32 +484,63 @@ function Main:JungleClear()
 end
 
 function Main:Killsteal()
-	target = STS:GetTarget(2000, 1, STS_LOW_HP_PRIORITY)
-	if target == nil then return end
-	igniteDmg = IgniteDamage()
-	if(target.valid and self.Config.Misc.UseIgnite and self.IgniteSlot ~= nil and self.IGNITE:IsReady())then
-		if(igniteDmg > target.health and GetDistance(target) <= self.IGNITE.range)then
-			self.IGNITE:Cast(target)
+	targets = GetCustomTargetTable()
+	
+	if #targets == 0 then return end
+	
+	for _, target in ipairs(targets) do
+		if target == nil then return end
+		-- igniteDmg = IgniteDamage()
+		-- if(target.valid and self.Config.Misc.UseIgnite and self.IgniteSlot ~= nil and self.IGNITE:IsReady())then
+			-- if(igniteDmg > target.health and GetDistance(target) <= self.IGNITE.range)then
+				-- self.IGNITE:Cast(target)
+			-- end
+		-- end
+		if(target.valid and not target.dead and self.Q:IsReady() and self.Config.Misc.UseQ and getDmg("Q", target, myHero) > target.health)then
+			if(GetDistance(target) <= self.Q.range)then
+				self.Q:SetSourcePosition(Vector(myHero))
+				self.Q:Cast(target)
+			elseif (self.WShadow() ~= nil and GetDistance(self.WShadow(), target) <= self.Q.range )then
+				self.Q:SetSourcePosition(Vector(self.WShadow()))
+				self.Q:Cast(target)
+			elseif (self.RShadow() ~= nil and GetDistance(self.RShadow(), target) <= self.Q.range )then
+				self.Q:SetSourcePosition(Vector(self.RShadow()))
+				self.Q:Cast(target)
+			end
+		end
+		if(target.valid and not target.dead and self.E:IsReady() and self.Config.Misc.UseE)then
+			if getDmg("E", target, myHero) > target.health  then
+				if GetDistance(target) <= self.E.range then
+					self.E:Cast()
+				else
+					shadows = self:NearShadow()
+					
+					for _, shadow in ipairs(shadows) do
+					
+						if GetDistance(shadow) <= self.E.range then
+							self.E:Cast()
+						end
+					end
+				end
+			end
+			
+			-- if(DLib:CalcSpellDamage(target, _E) > t.health and (GetDistance(target) <= self.E.range or GetDistance(target, self:WShadow()) <= self.E.range))then
+				-- self.E:Cast()
+			-- end
 		end
 	end
-	if(target.valid and self.Q:IsReady() and self.Config.Misc.UseQ and DLib:CalcComboDamage(target, {_Q}) > target.health)then
-		if(GetDistance(target) <= self.Q.range)then
-			self.Q:SetSourcePosition(Vector(myHero))
-			self.Q:Cast(target)
-		elseif (self.WShadow() ~= nil and GetDistance(self.WShadow(), target) <= self.Q.range )then
-			self.Q:SetSourcePosition(Vector(self.WShadow()))
-			self.Q:Cast(target)
-		elseif (self.RShadow() ~= nil and GetDistance(self.RShadow(), target) <= self.Q.range )then
-			self.Q:SetSourcePosition(Vector(self.RShadow()))
-			self.Q:Cast(target)
+end
+
+function GetCustomTargetTable()
+	_t = {}
+	
+	for _, enemy in ipairs(GetEnemyHeroes()) do
+		if(GetDistance(enemy) < 2000)then
+			table.insert(_t, enemy)
 		end
 	end
-	if(target.valid and self.R:IsReady() and self.Config.Misc.UseE)then
-		t = STS:GetTarget(self.E.range, 1, STS_LOW_HP_PRIORITY)
-		if(DLib:CalcComboDamage(t, {_E}) > t.health and (GetDistance(target) <= self.E.range or GetDistance(target, self:WShadow()) <= self.E.range))then
-			self.E:Cast()
-		end
-	end
+	table.sort(_t, function(a, b) return a.health < b.health end)
+	return _t
 end
 
 
@@ -526,9 +556,31 @@ function Main:ShadowStage()
 		return 1
 	end
 	return 2
-end 
+end
+
+function Main:CanDamaged(target)
+	for _, buff in ipairs(DONOTCASTDURINGHASTHISBUFFES) do
+		if (HasBuff(target, buff)) then return true end
+	end
+	return false
+end
+
+function Main:NearShadow(object, range)
+	if self.Shadow == nil then return end	
+	if #self.Shadow == 0 then return end
+	result = {}
+	for _, data in ipairs(self.Shadow) do
+		if(GetDistance(data, object) < range) then
+			table.insert(result, data)
+		end
+	end
+	if #result == 0 then return nil end
+	return result
+end
 
 function Main:WShadow()
+	if self.Shadow == nil then return nil end
+	if #self.Shadow == 0 then return nil end
 	for _, data in ipairs(self.Shadow)do
 		if(data and data.valid and Vector(data) ~= Vector(self.rpos) and data.name == "Shadow") then return data end
 	end
@@ -536,6 +588,8 @@ function Main:WShadow()
 end
 
 function Main:RShadow()
+	if self.Shadow == nil then return nil end
+	if #self.Shadow == 0 then return nil end
 	for _, data in ipairs(self.Shadow)do
 		if(data and data.valid and Vector(data) == Vector(self.rpos) and data.name == "Shadow") then return data end
 	end
