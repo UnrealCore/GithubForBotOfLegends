@@ -30,7 +30,7 @@ else
 	DownloadFile(UPDATE_URL, LIB_PATH .. "SourceLibk.lua", function() printMessage("Successfully Download, please reload!") end)
 	return
 end
-local VERSION = 1.3
+local VERSION = 1.4
 SimpleUpdater("[ZedCore]", VERSION, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.lua" , SCRIPT_PATH .. "ZedCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.version" ):CheckUpdate()
 local DangerousList = {
 	"AatroxQ",
@@ -218,7 +218,7 @@ function Main:Initialization()
 	
 	AddTickCallback(function() self:OnTick() end)
 	AddProcessSpellCallback(function(unit, spell) self:OnProcessSpell(unit, spell) end)
-	-- AddCreateObjCallback(function(obj) self:OnCreateObj(obj) end)
+	AddCreateObjCallback(function(obj) self:OnCreateObj(obj) end)
 	AddDrawCallback(function() self:OnDraw() end)
 	AddAnimationCallback(function(unit, anim) self:Anim(unit, anim) end)
 	-- AddOnWndMsgCallback(function(msg, wParam) self:OnWndMsg(msg, wParam) end)
@@ -265,11 +265,11 @@ function Main:OnProcessSpell(unit, spell)
 		self.rpos = Vector(spell.startPos)
 	end
 end
--- function Main:OnCreateObj(obj)
-	-- if(obj.name == "Shadow")then
-		-- table.insert(self.Shadow, obj)
-	-- end
--- end
+function Main:OnCreateObj(obj)
+	if(obj.name == "Shadow")then
+		table.insert(self.Shadow, obj)
+	end
+end
 function Main:OnWndMsg(msg, wParam)
 	if msg == 513 then
 		-- print("Mouse Left Click")
