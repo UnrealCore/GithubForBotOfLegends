@@ -58,7 +58,7 @@ else
 	DownloadFile(UPDATE_URL, LIB_PATH .. "SourceLibk.lua", function() printMessage("Successfully Download, please reload!") end)
 	return
 end
-
+local ScriptVersion = 1.0
 SimpleUpdater("[MinorBundle]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/MinorBundle/MinorBundle.lua" , SCRIPT_PATH .. "MinorBundle.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/MinorBundle/MinorBundle.version" ):CheckUpdate()
 
 -- sup
