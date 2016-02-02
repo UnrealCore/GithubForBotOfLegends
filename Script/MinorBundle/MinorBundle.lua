@@ -287,7 +287,9 @@ end
 function Extends2(v1, v2, v3)
 	return Vector(v1) + (Vector(v2) - Vector(v1)):normalized() * (GetDistance(v1, v2)+v3)
 end
-
+function GetPoint(source, range, spell)
+	-- pos = spell.startPos + (spell.endPos - spell.startPos) * ((os.clock() - spell.startTime) / (spell.range / spell.speed))
+end
 --Urgot
 
 function Urgot:__init()
@@ -435,12 +437,23 @@ function Shen:__init()
 	-- swarddraw = _Circle(self.swardObj, 200, 1, Colors2.Red)
 	DM:CreateCircle(myHero, self.E.range, 1, Colors2.Red, "Draw E range")
 	
+	IT:AddCallback(
+		function(unit, spell)
+			if GetDistance(unit) < self.E.range then CastSpell(_E, unit.x, unit.z) end
+		end
+	)
+	
 	AGC:AddCallback(
 		function(unit, spell)
 		--[[
 			unit = unit, spell = spell.name, startT = os.clock(), endT = os.clock() + 1, startPos = startPos, endPos = endPos
 		]]
 			-- if not self.Config.Misc.AE then return end
+			-- if unit.charName == "Ezreal" then
+				-- if GetDistance(spell.endPos) < self.E.range then
+					-- self.E:Cast(spell.endPos.x, spell.endPos.z)
+				-- end
+			-- end
 			-- if GetDistance(spell.startPos) < GetDistance(spell.endPos) and GetDistance(spell.startPos) < E.range then -- run away
 			
 				-- speed = ( spell.endT - spell.startT ) / ( spell.endPos - spell.startPos )
@@ -466,9 +479,9 @@ function Shen:__init()
 				-- if GetDistance(castPos) < self.E.range then
 					-- self.E:Cast(castPos.x, castPos.z)
 				-- end
-				
+			-- CastSpell(_E, )
 			-- end
-			-- CastSpell(_E, spell.endPos.x, spell.endPos.z)
+				self.E:CastIfDashing(unit)
 		end)
 	
 	self.Config = scriptConfig(ScriptName, ScriptName)
