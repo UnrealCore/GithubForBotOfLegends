@@ -468,7 +468,7 @@ function Shen:__init()
 				-- end
 				
 			-- end
-			CastSpell(_E, spell.endPos.x, spell.endPos.z)
+			-- CastSpell(_E, spell.endPos.x, spell.endPos.z)
 		end)
 	
 	self.Config = scriptConfig(ScriptName, ScriptName)
