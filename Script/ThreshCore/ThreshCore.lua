@@ -30,7 +30,7 @@ else
 end
 
 
-local ScriptVersion = 1.3
+local ScriptVersion = 1.4
 
 SimpleUpdater("[ThreshCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ThreshCore/ThreshCore.lua" , SCRIPT_PATH .. "ThreshCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ThreshCore/ThreshCore.version" ):CheckUpdate()
 
@@ -42,6 +42,8 @@ local Flash = {Range = 450, Slot = nil}
 local Config = scriptConfig(ScriptName, ScriptName)
 local oWp = 0;
 local nWp = 0;
+local LanternPosition = nil
+local LanternObjName = "Thresh_Base_Lantern.troy"
 
 local Interrupts, AGC;
 
@@ -53,6 +55,7 @@ function OnLoad()
 	W = Spell(_W, 950)
 	E = Spell(_E, 400)
 	R = Spell(_R, 400)
+	Flash = Summoner("summonerdot", 450)
 	
 	QCircle = _Circle(myHero, Q.range, 1, {100, 255, 0, 0})
 	WCircle = _Circle(myHero, W.range, 1, {100, 255, 0, 0})
@@ -77,11 +80,9 @@ function OnLoad()
 		--[[
 			unit = unit, spell = spell.name, startT = os.clock(), endT = os.clock() + 1, startPos = startPos, endPos = endPos
 		]]
-			if(GetDistance(unit) < E.range and Config.GapCloser.UseE) then
-				E:Cast(spell.endPos)
-			end
-			if(GetDistance(unit) < R.range and Config.GapCloser.UseR)then
-				R:Cast()
+			if not Config.AntiGapCloser.EGapCloser then return end
+			if GetDistance(spell.endPos) < E.range then
+				E:Cast(spell.endPos.x, spell.endPos.z)
 			end
 		end
 	)
@@ -92,7 +93,7 @@ function OnLoad()
 		OWM:AddToMenu(Config.OWM)
 	Config:addSubMenu("Combo", "Combo")
 		Config.Combo:addParam("UseQ", "Use Q", SCRIPT_PARAM_ONOFF, true)
-		Config.Combo:addParam("UseW", "Use W", SCRIPT_PARAM_ONOFF, true)
+		-- Config.Combo:addParam("UseW", "Use W mode", SCRIPT_PARAM_LIST, {"To Closet", "Off"})
 		Config.Combo:addParam("UseE", "Use E", SCRIPT_PARAM_ONOFF, true)
 		Config.Combo:addParam("UseR", "Use R", SCRIPT_PARAM_ONOFF, true)
 		Config.Combo:addParam("UseRPercent", "use r near enemy >=", SCRIPT_PARAM_SLICE, 2, 1, 5)
@@ -115,12 +116,20 @@ function OnLoad()
 	
 	Config:addSubMenu("Gap Closers", "GapCloser")
 		Config.GapCloser:addParam("EGapCloser", "Auto use E away on Gap Closers", SCRIPT_PARAM_ONOFF, true)
-		Config.GapCloser:addParam("RGapCloser", "Auto use R on Gap Closers", SCRIPT_PARAM_ONOFF, true)
+		-- Config.GapCloser:addParam("RGapCloser", "Auto use R on Gap Closers", SCRIPT_PARAM_ONOFF, true)
 		AGC:AddToMenu(Config.GapCloser)
 	
 	Config:addSubMenu("Lantern Settings", "LanternSettings")
 		Config.LanternSettings:addParam("ThreshLantern", "Throw Lantern to ally", SCRIPT_PARAM_ONKEYDOWN, false, string.byte('T'))
 		Config.LanternSettings:addParam("Prioritize", "Prioritize", SCRIPT_PARAM_LIST, 3, {"FARTHEST Ally", "NEAREST ALLY", "LOWEST HEALTH ALLY"})
+	
+	Config:addSubMenu("Misc feature", "Misc")
+		Config.Misc:addSubMenu("Q With Lantern", "Feature1")
+			Config.Misc.Feature1:addParam("Enable", "Do it", SCRIPT_PARAM_ONKEYDOWN, false, string.byte('G'))
+			Config.Misc.Feature1:addParam("info1", "this is Q -> Lantern to near ally", SCRIPT_PARAM_INFO, "")
+			Config.Misc.Feature1:addParam("info2", "Q2 will casted enemy is near from lantern", SCRIPT_PARAM_INFO, "")
+			Config.Misc.Feature1:addParam("OnlyClickedTarget", "Only Cast to Clicked Target", SCRIPT_PARAM_ONOFF, true)
+			-- Config.Misc.Feature1:addParam("UseFlash", "Use Flash", SCRIPT_PARAM_ONOFF, true)
 	
 	Config:addSubMenu("Drawings", "Drawings")
 		QCircle:AddToMenu(Config.Drawings, "Q circle setting", true, false, true)
@@ -145,12 +154,20 @@ function OnTick()
 		end
 	end
 	
+	for _, enemy in ipairs(GetEnemyHeroes())do
+		
+	end
+	
 	--if(Config.FHook.FlashQ) then
 	
 	--end
 	
 	if(Config.LanternSettings.ThreshLantern) then
 		ThrowLantern()
+	end
+	
+	if Config.Misc.Feature1.Enable then
+		Feature1()
 	end
 	
 	if(OWM:IsComboMode())then
@@ -165,6 +182,18 @@ function OnDraw()
 	WCircle:Draw()
 	ECircle:Draw()
 	RCircle:Draw()
+end
+
+function OnCreateObj(obj)
+	if obj.name == LanternObjName then
+		LanternPosition = Vector(obj)
+	end
+end
+
+function OnDeleteObj(obj)
+	if obj.name == LanternObjName then
+		LanternPosition = nil
+	end
 end
 
 function ThrowLantern()
@@ -201,18 +230,47 @@ function ThrowLantern()
 	end
 end
 
+function Feature1()
+	target = GetTarget() or (not Config.Misc.Feature1.OnlyClickedTarget and STS:GetTarget(Q.range))
+	if target ~= nil then
+		if Qstat() == 1 then
+			Q:Cast(target)
+		else
+			ally = GetAllyHeroes()
+			table.sort(ally, function(a, b) return GetDistance(a) < GetDistance(b) end)
+			if GetDistance(ally[1]) < W.range then
+				W:Cast(ally[1].x, ally[1].z)
+			elseif GetDistance(ally[1]) < W.range+400 then
+				pos = Extends(myHero, ally[1], W.range)
+				W:Cast(pos.x, pos.z)
+			end
+			if LanternPosition ~= nil then
+				if GetDistance(LanternPosition, ally[1]) < 350 and Qstat() == 2 then
+					if GetDistance(target) < Q.range then
+						Q:Cast()
+					elseif GetDistance(target) < Q.range + 420 then
+						Flash:Cast()
+					end
+				end
+			end
+		end
+	end
+	myHero:MoveTo(mousePos.x, mousePos.z)
+end
+
 function Push(t)
 	target = t or GetTarget() or STS:GetTarget(E.range)
 	if(target ~= nil) then
-		E:Cast(Vector(target))
+		E:Cast(target.x, target.z)
 	end
 end
 
 function Pull(t)
 	target = t or GetTarget() or STS:GetTarget(E.range)
 	if(target ~= nil) then
-		pos = Vector(target) + (Vector(myHero) - Vector(target)):normalized() * (GetDistance(target)+400)
-		E:Cast(pos)
+		pos = Vector(target) + (Vector(myHero) - Vector(target)):normalized() * (GetDistance(target)+E.range)
+		-- CastSpell(_E, pos.x, pos.z)
+		E:Cast(pos.x, pos.z)
 	end
 end
 
@@ -240,9 +298,9 @@ function Harass()
 	
 	if(target ~= nil)then
 		if(Q:IsReady() and Config.Harass.UseQ < 3 and GetDistance(target) < Q.range ) then
-			if Q:GetName() == "ThreshQ" then
+			if Qstat() == 1 then
 				Q:Cast(target)
-			elseif Q:GetName():find("leep") and Config.Harass.UseQ == 1 then
+			elseif Qstat() == 2 and Config.Harass.UseQ == 1 then
 				Q:Cast()
 			end
 		end
@@ -260,4 +318,41 @@ function GetNearObject(position, distance, objects)
 		end
 	end
 	return count
+end
+
+function Qstat()
+	if not Q:IsReady() then return 0 end
+	if Q:GetName() == "ThreshQ" then return 1 end
+	return 2
+end
+
+function Extends(v1, v2, v3)
+	return Vector(v1) + (Vector(v2) - Vector(v1)):normalized() * v3
+end
+
+class('Summoner')
+function Summoner:__init(Id, range)
+	self.slot = GetSummonerSlot(Id)
+	self.range = range
+end
+function Summoner:IsReady()
+	if self.slot == nil then return false end
+	return myHero:CanUseSpell(self.slot) == READY
+end
+function Summoner:GetDamage(target)
+	return 50 + 20 * myHero.level
+end
+function Summoner:Cast(param1, param2)
+	if param1 ~= nil and param2 ~= nil then
+		if type(param1) ~= "number" and type(param2) ~= "number" and VectorType(param1) and VectorType(param2) then
+			-- Packet("S_CAST", {spellId = self.spellId, toX = param2.x, toY = param2.z, fromX = param1.x, fromY = param1.z}):send()
+			CastSpell(self.slot, param1, param2)
+		else
+			CastSpell(self.slot, param1, param2)
+		end
+	elseif param1 ~= nil then
+		CastSpell(self.slot, param1)
+	else
+		CastSpell(self.slot)
+	end
 end
