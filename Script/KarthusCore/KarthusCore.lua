@@ -30,7 +30,7 @@ function GetNearObject(position, distance, objects)
 end
 local ScriptName = "KarthusCore"
 printMessage = function(message) print("<font color=\"#6699ff\"><b>" .. ScriptName .. ":</b></font> <font color=\"#FFFFFF\">" .. message .. "</font>") end
-SimpleUpdater("[KarthusCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/KarthusCore/KarthusCore.lua" , SCRIPT_PATH .. "KarthusCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/KarthusCore/KarthusCore.version" ):CheckUpdate()
+
 -- Rename(LIB_PATH.."SourceLib_Fix.lua", "SourceLibk.lua")
 if Check(LIB_PATH.."SourceLibk.lua") then
 	require 'SourceLibk'
@@ -42,6 +42,8 @@ else
 	DownloadFile(UPDATE_URL, LIB_PATH .. "SourceLibk.lua", function() printMessage("Successfully Download, please reload!") end)
 	return
 end
+local ScriptVersion = 1.0
+SimpleUpdater("[KarthusCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/KarthusCore/KarthusCore.lua" , SCRIPT_PATH .. "KarthusCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/KarthusCore/KarthusCore.version" ):CheckUpdate()
 local Colors = { 
     -- O R G B
     Green   =  ARGB(255, 0, 180, 0), 
