@@ -30,7 +30,7 @@ else
 	DownloadFile(UPDATE_URL, LIB_PATH .. "SourceLibk.lua", function() printMessage("Successfully Download, please reload!") end)
 	return
 end
-local VERSION = 1.4
+local VERSION = 1.5
 SimpleUpdater("[ZedCore]", VERSION, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.lua" , SCRIPT_PATH .. "ZedCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.version" ):CheckUpdate()
 local DangerousList = {
 	"AatroxQ",
@@ -67,6 +67,14 @@ local DangerousList = {
 local DONOTCASTDURINGHASTHISBUFFES = {
 	"JudicatorIntervention",
 	"UndyingRange",
+}
+local SpellType = {
+	Line = "SkillshotLine",
+	MissileLine = "SkillshotMissileLine",
+	Circular = "SkillshotCircle",
+	Cone = "SkillshotCone",
+	Arc = "SkillshotArc",
+	Ring = "SkillshotRing",
 }
 local OWM = OrbWalkManager(ScriptName)
 local STS = SimpleTS()
@@ -172,7 +180,7 @@ function Main:Initialization()
 		CM:AddToMenu(self.Config.Draw)
 	
 	self.Config:addSubMenu("Combo", "Combo")
-		self.Config.Combo:addParam("UseW", "Use W", SCRIPT_PARAM_ONOFF, true)
+		self.Config.Combo:addParam("UseW", "Use W", SCRIPT_PARAM_LIST, 2, {"Following", "Always", "Off"})
 		self.Config.Combo:addParam("UseIgnite", "Use Ignite", SCRIPT_PARAM_ONOFF, true)
 		self.Config.Combo:addParam("UseUlt", "Use Ultimate", SCRIPT_PARAM_ONOFF, true)
 		self.Config.Combo:addParam("TheLine", "Line Combo", SCRIPT_PARAM_ONKEYDOWN, false, string.byte('T'))
@@ -434,7 +442,9 @@ function Main:Combo()
 				self.IGNITE:Cast(target)
 			end
 		end
-		if(target~= nil and self:ShadowStage() == 1 and self.Config.Combo.UseW and GetDistance(target) > 400 and GetDistance(target) < 1300)then
+		if(target~= nil and self:ShadowStage() == 1 and self.Config.Combo.UseW < 3 and GetDistance(target) > 400 and GetDistance(target) < 1300)then
+			self:CastW(target)
+		elseif target ~= nil and self:ShadowStage() == 1 and self.Config.Combo.UseW < 2 and GetDistance(target) < 400 and GetDistance(target) < 1300 then
 			self:CastW(target)
 		end
 		if(target ~= nil and self:ShadowStage() == 2 and self.Config.Combo.UseW and GetDistance(Vector(self:WShadow())) < GetDistance(Vector(target)))then
@@ -675,7 +685,13 @@ end
 function Main:CastW(target)
 	if(self.delayw >= GetTickCount() - self.shadowdelay or self:ShadowStage() ~= 1 or HasBuff(target, "zedulttargetmark") and self.R:IsReady()) then return end
 	
-	local wPos = Extends(target, myHero, -200)
+	local wPos = nil
+	
+	if GetDistance(target) < self.W.range then
+		wPos = Extends(myHero, target, GetDistance(myHero, target))
+	else
+		wPos = Extends(target, myHero, -200)
+	end
 	self.W:Cast(wPos.x, wPos.z)
 	self.shadowndelay = GetTickCount()
 end
