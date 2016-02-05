@@ -1,3 +1,14 @@
+if myHero.charName ~= "Tryndamere" then return end
+function Check(file_name)
+	local file_found=io.open(file_name, "r")      
+
+	if file_found==nil then
+		return false
+	else
+		return true
+	end
+	return file_found
+end
 if Check(LIB_PATH.."SourceLibk.lua") then
 	require 'SourceLibk'
 else
