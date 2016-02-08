@@ -12,11 +12,11 @@ end
 if Check(LIB_PATH.."SourceLibk.lua") then
 	require 'SourceLibk'
 else
-	printMessage("Cant check SourceLibk. Download lastest version")
+	print("Cant check SourceLibk. Download lastest version")
 	UPDATE_HOST = "raw.github.com"
     UPDATE_PATH = "/kej1191/anonym/master/Common/SourceLibk.lua" .. "?rand="..math.random(1,10000)
     UPDATE_URL = "https://"..UPDATE_HOST..UPDATE_PATH
-	DownloadFile(UPDATE_URL, LIB_PATH .. "SourceLibk.lua", function() printMessage("Successfully Download, please reload!") end)
+	DownloadFile(UPDATE_URL, LIB_PATH .. "SourceLibk.lua", function() print("Successfully Download, please reload!") end)
 	return
 end
 local ScriptVersion = 1.0
