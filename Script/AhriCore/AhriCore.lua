@@ -26,7 +26,7 @@ else
 end
 
 ---------------------------------------------------------------------
-local ScriptVersion = 1.4
+local ScriptVersion = 1.5
 SimpleUpdater("[AhriCore]", ScriptVersion, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.lua" , SCRIPT_PATH .. "AhriCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/AhriCore/AhriCore.version" ):CheckUpdate()
 
 local Q, W, E, R, Ignite
@@ -38,6 +38,7 @@ local DLib = DamageLib()
 local CLib = DrawManager()
 local enemyMinion, enemyJungle
 local Walldata = nil
+local TickCount = 0
 
 function OnLoad()
 	Q = Spell(_Q, 965)
@@ -126,6 +127,9 @@ function OnLoad()
 	Config:addSubMenu("AutoR", "AutoR")
 		Config.AutoR:addParam("UseInCombo", "Use R when combo kill in combo mode", SCRIPT_PARAM_ONKEYTOGGLE, false, string.byte('U'))
 		--Config.AutoR:addParam()
+	
+	Config:addSubMenu("Misc", "Misc")
+		Config.Misc:addParam("SystemSpeed", "System throughput (1000 = 1s)", SCRIPT_PARAM_SLICE, 50, 0, 1000)
 
 	
 	Config:addSubMenu("Draw", "Draw")
@@ -145,16 +149,20 @@ function OnLoad()
 end
 function OnTick()
 	if (myHero.dead) then return end
-	if (Config.HarassT.HotKey) then HarassToggle() end
-	if (OLib:IsComboMode())then Combo()
-	elseif OLib:IsHarassMode() then Harass()
-	elseif OLib:IsLastHitMode() then LastHit()
-	elseif OLib:IsClearMode() then 
-		LineClear() 
-		JungleClear()
+	if TickCount > Config.Misc["SystemSpeed"] then
+		if (Config.HarassT.HotKey) then HarassToggle() end
+		if (OLib:IsComboMode())then Combo()
+		elseif OLib:IsHarassMode() then Harass()
+		elseif OLib:IsLastHitMode() then LastHit()
+		elseif OLib:IsClearMode() then 
+			LineClear() 
+			JungleClear()
+		end
+		if(Config.Flee.HotKey) then Flee() end
+		RCombo()
+		TickCount = 0
 	end
-	if(Config.Flee.HotKey) then Flee() end
-	RCombo()
+	TickCount = TickCount + 1
 end
 function Combo()
 	target = STS:GetTarget(Q.range)
