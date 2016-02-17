@@ -30,7 +30,7 @@ else
 	DownloadFile(UPDATE_URL, LIB_PATH .. "SourceLibk.lua", function() printMessage("Successfully Download, please reload!") end)
 	return
 end
-local VERSION = 1.5
+local VERSION = 1.6
 SimpleUpdater("[ZedCore]", VERSION, "raw.github.com" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.lua" , SCRIPT_PATH .. "ZedCore.lua" , "/UnrealCore/GithubForBotOfLegends/master/Script/ZedCore/ZedCore.version" ):CheckUpdate()
 local DangerousList = {
 	"AatroxQ",
@@ -144,6 +144,7 @@ function Main:Initialization()
 	self.LastCast = nil
 	self.Shadow = {}
 	
+	
 	self.LBClicked = false
 	
 	self.minionTable = minionManager(MINION_ENEMY, 1400, myHero, MINION_SORT_MAXHEALTH_DEC)
@@ -156,12 +157,12 @@ function Main:Initialization()
 	
 	DLib:RegisterDamageSource(_Q, _PHYSICAL, 75, 40, _PHYSICAL, _BONUS_AD, 1, function() return myHero:CanUseSpell(_Q) end)
 	DLib:RegisterDamageSource(_E, _PHYSICAL, 60, 30, _PHYSICAL, _BONUS_AD, 0.9, function() return myHero:CanUseSpell(_E) end)
-	DLib:RegisterDamageSource(_R, _PHYSICAL, 0, 0, _PHYSICAL, _AD, 1, function() return myHero:CanUseSpell(_R) end)
+	DLib:RegisterDamageSource(_R, _PHYSICAL, 0, 0, _PHYSICAL, _AD, 1, function() return myHero:CanUseSpell(_R) end, function() return 0 end)
 	DLib:RegisterDamageSource(_Bilge, _MAGIC, 100, 0, _MAGIC, _AP, 0, function() return self.Blade:IsReady() end)
 	
 	-- self.IgniteSlot = GetSummonerSlot("summonerdot")
 	-- _IGNITE = self.IgniteSlot
-	
+	        
 	self.IGNITE = IGNITE()
 	
 	self.Config = scriptConfig(ScriptName, ScriptName)
@@ -173,8 +174,7 @@ function Main:Initialization()
 		STS:AddToMenu(self.Config.TargetSelecter)
 	
 	self.Config:addSubMenu("DamageLib", "DamageLib")
-		-- DLib:AddToMenu(self.Config.DamageLib, {})
-		self.Config.DamageLib:addParam("DrawPredictedHealth", "Draw damage after combo.", SCRIPT_PARAM_ONOFF , true)
+		 DLib:AddToMenu(self.Config.DamageLib, {_Q, _E, _R})
 	
 	self.Config:addSubMenu("Draw", "Draw")
 		CM:AddToMenu(self.Config.Draw)
@@ -221,6 +221,11 @@ function Main:Initialization()
 			end
 		end
 	
+	self.Config:addSubMenu("BlackList", "bl")
+		for _, enemy in ipairs(GetEnemyHeroes())do
+			self.Config.bl:addParam("bl" .. enemy.charName, "use r to " .. enemy.charName, SCRIPT_PARAM_ONOFF, true)
+		end
+	
 	self.Config:addSubMenu("SS", "SS")
 		self.Q:AddToMenu(self.Config.SS)
 	
@@ -230,6 +235,7 @@ function Main:Initialization()
 	AddDrawCallback(function() self:OnDraw() end)
 	AddAnimationCallback(function(unit, anim) self:Anim(unit, anim) end)
 	-- AddOnWndMsgCallback(function(msg, wParam) self:OnWndMsg(msg, wParam) end)
+	-- AdvancedCallback:bind('OnTowerFocus', function(tower, unit) self:OnTowerFocus(tower,unit) end)
 end
 function Main:Anim(unit, anim)
 	if unit.team == myHero.team and unit.name == "Shadow" then
@@ -245,6 +251,13 @@ function Main:Anim(unit, anim)
 		end
 	end
 	-- print(unit.name.." : "..anim..)
+end
+function Main:OnTowerFocus(tower, unit)
+	if tower == nil or unit == nil or tower.team ~= myHero.team or unit.team == myHero.team then return end
+	if myHero:GetDistance(unit) <= self.Q.range then
+		self.targetUnderTurret = unit
+		self.turrent = tower
+	end
 end
 function Main:OnProcessSpell(unit, spell)
 	if(unit.type ~= myHero.type)then return end
@@ -288,49 +301,14 @@ function Main:OnWndMsg(msg, wParam)
 	end
 end
 function Main:OnDraw()
-	if self.Config.DamageLib.DrawPredictedHealth then
-		for _, enemy in ipairs(GetEnemyHeroes())do
-			self:DrawIndicator(enemy)
-		end
-	end
+--	if self.Config.DamageLib.DrawPredictedHealth then
+--		for _, enemy in ipairs(GetEnemyHeroes())do
+--			self:DrawIndicator(enemy)
+--		end
+--	end
 	if self.Config.Misc.rdodge then
 		DrawText("R with evade dangerous spell : <" .. tostring(self.LBClicked) .. "> just click mouse left button", 18, 100, 100, ARGB(255, 0, 255, 0) )
 	end
-end
-function Main:DrawIndicator(enemy)
-
-	if not enemy.valid or enemy.dead then return end
-    local aft = math.max(0, enemy.health - self:GetComboDamage(enemy)) / enemy.maxHealth
-    local SPos, EPos = GetHPBarPos(enemy)
-
-    -- Validate data
-    if not VectorType(SPos) then return end
-	
-	local barwidth = EPos.x - SPos.x
-	damage = self:GetComboDamage(enemy)
-    local Position = SPos.x + math.max(0, ((enemy.health - damage) / enemy.maxHealth) * (enemy.health / enemy.maxHealth)*108)
-	
-    DrawText("|", 16, math.floor(Position), math.floor(SPos.y-23), ARGB(255,0,255,0))
-    DrawText("After HP: "..math.floor(enemy.health - damage), 13, math.floor(SPos.x), math.floor(SPos.y), (enemy.health - damage) > 0 and ARGB(255, 0, 255, 0) or  ARGB(255, 255, 0, 0))
-
-end
-function GetHPBarPos(enemy)
-	enemy.barData = {PercentageOffset = {x = -0.05, y = 0}}--GetEnemyBarData()
-	local barPos = GetUnitHPBarPos(enemy)
-	local barPosOffset = GetUnitHPBarOffset(enemy)
-	local barOffset = { x = enemy.barData.PercentageOffset.x, y = enemy.barData.PercentageOffset.y }
-	local barPosPercentageOffset = { x = enemy.barData.PercentageOffset.x, y = enemy.barData.PercentageOffset.y }
-	local BarPosOffsetX = 171
-	local BarPosOffsetY = 46
-	local CorrectionY = 39
-	local StartHpPos = 31
-
-	barPos.x = math.floor(barPos.x + (barPosOffset.x - 0.5 + barPosPercentageOffset.x) * BarPosOffsetX + StartHpPos)
-	barPos.y = math.floor(barPos.y + (barPosOffset.y - 0.5 + barPosPercentageOffset.y) * BarPosOffsetY + CorrectionY)
-
-	local StartPos = Vector(barPos.x , barPos.y, 0)
-	local EndPos =  Vector(barPos.x + 108 , barPos.y , 0)
-	return Vector(StartPos.x, StartPos.y, 0), Vector(EndPos.x, EndPos.y, 0)
 end
 function Main:OnTick()
 	if(OWM:IsComboMode())then
@@ -428,7 +406,7 @@ function Main:Combo()
 	if target == nil then return end
 	local overkill = DLib:CalcComboDamage(target, {_Q, _E}) + getDmg("AD", target , myHero) * 2
 	
-	if(self.Config.Combo.UseUlt and not self.LBClicked and self.R:IsReady() and self:UltStat() == 1 and not self:CanDamaged(target) and (overkill > target.health or (not self.W:IsReady() and DLib:CalcSpellDamage(target, _Q) < target.health and GetDistance(target) > 400)))then
+	if(self.Config.Combo.UseUlt and not self:IsBlackList(target) and not self.LBClicked and self.R:IsReady() and self:UltStat() == 1 and not self:CanDamaged(target) and (overkill > target.health or (not self.W:IsReady() and DLib:CalcSpellDamage(target, _Q) < target.health and GetDistance(target) > 400)))then
 		if((GetDistance(target) > 700 and target.ms > myHero.ms or GetDistance(Vector(target)) > 800 )) then
 			self:CastW(target);
 			self.W:Cast()
@@ -477,7 +455,7 @@ function Main:TheLine()
 	if(target ~= nil and not self:CanDamaged(target) and  self:ShadowStage() == 1 and self:UltStat() == 2)then --  
 		-- self:UseItem(target);
 		-- if(self.LastCast.name ~= self.W:GetName())then
-			self.W:Cast(linepos);
+			self.W:Cast(linepos.x, linepos.z);
 			self:CastE()
 			self:CastQ(target)
 			
@@ -562,14 +540,19 @@ function Main:LastHit()
 		end
 	end
 end
+function Main:UnderTowerFarm()
+	if self.targetUnderTurret ~= nil and self.targetUnderTurret.dead then
+		self.targetUnderTurret = nil
+		self.turrent = nil
+	end
+end
 function Main:JungleClear()
 	self.jungleTable:update()
-	
 	mana = myHero.mana >= (myHero.maxMana*self.Config.JungleClear.Energy/100)
 	if(#self.jungleTable.objects>0 and mana )then
 		mob = self.jungleTable.objects[1]
 		if(self.W:IsReady() and self.Q:IsReady() and GetDistance(mob) < self.Q.range)then
-			self.W:Cast(Vector(mob))
+			self.W:Cast(Vector(mob).x, Vector(mob).z)
 		end
 		if(self.Q:IsReady() and GetDistance(mob) < self.Q.range )then
 			self:CastQ(mob)
@@ -610,12 +593,14 @@ function Main:Killsteal()
 				else
 					shadows = self:NearShadow(target, self.E.range)
 					
-					for _, shadow in ipairs(shadows) do
+					if shadows ~= nil then
+                        for _, shadow in ipairs(shadows) do
 					
-						if GetDistance(shadow) <= self.E.range then
-							self.E:Cast()
-						end
-					end
+						    if GetDistance(shadow) <= self.E.range then
+							    self.E:Cast()
+						    end
+					    end
+                    end
 				end
 			end
 			
@@ -647,6 +632,9 @@ function Main:ShadowStage()
 		return 1
 	end
 	return 2
+end
+function Main:IsBlackList(target)
+	return self.Config.bl["bl" .. target.charName]
 end
 function Main:CanDamaged(target)
 	for _, buff in ipairs(DONOTCASTDURINGHASTHISBUFFES) do
